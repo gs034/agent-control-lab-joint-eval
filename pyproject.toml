@@ -24,7 +24,7 @@ dependencies = [
     # Pinned GitHub main-line tips. Do not vendor sibling trees.
     # Prefer these SHA pins over floating branches.
     "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@634c2625bb5392e060e38a5ce463bf8b85346a84",
-    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@7e36aa04fa70fd647e8569ab832f58325e15d979",
+    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@ba845ea0937c457a33b3d0d4a15fd06aaf088c92",
 ]
 
 [project.optional-dependencies]
