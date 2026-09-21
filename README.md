@@ -43,13 +43,13 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
 | `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `634c2625bb5392e060e38a5ce463bf8b85346a84` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `ba845ea0937c457a33b3d0d4a15fd06aaf088c92` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `78cf6be05d5a1024c9b3a6179fcd55bf8c35847a` |
 
 Equivalent pip form:
 
 ```text
 agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@634c2625bb5392e060e38a5ce463bf8b85346a84
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@ba845ea0937c457a33b3d0d4a15fd06aaf088c92
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@78cf6be05d5a1024c9b3a6179fcd55bf8c35847a
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
