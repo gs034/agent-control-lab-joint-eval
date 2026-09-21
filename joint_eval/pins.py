@@ -13,7 +13,7 @@ PEP_SHA = "634c2625bb5392e060e38a5ce463bf8b85346a84"
 PEP_PACKAGE = "agent-control-lab-pep"
 
 SUPPLY_GATE_REPO = "https://github.com/gs034/agent-control-lab-supply-gate"
-SUPPLY_GATE_SHA = "ba845ea0937c457a33b3d0d4a15fd06aaf088c92"
+SUPPLY_GATE_SHA = "78cf6be05d5a1024c9b3a6179fcd55bf8c35847a"
 SUPPLY_GATE_PACKAGE = "agent-control-lab-supply-gate"
 
 
