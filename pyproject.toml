@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-control-lab-joint-eval"
+version = "0.1.0"
+description = "Agent Control Lab joint evaluator harness (existence-proof; pinned pep + supply-gate)."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "Agent Control Lab contributors" }]
+keywords = ["ai-control", "policy-enforcement-point", "supply-integrity", "public-goods"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Science/Research",
+    "Topic :: Security",
+]
+dependencies = [
+    # Pinned GitHub main-line tips. Do not vendor sibling trees.
+    # Prefer these SHA pins over floating branches.
+    "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@634c2625bb5392e060e38a5ce463bf8b85346a84",
+    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@7e36aa04fa70fd647e8569ab832f58325e15d979",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+joint-eval-demo = "joint_eval.demo:main"
+
+[project.urls]
+Homepage = "https://github.com/gs034/agent-control-lab-joint-eval"
+Pep = "https://github.com/gs034/agent-control-lab-pep"
+SupplyGate = "https://github.com/gs034/agent-control-lab-supply-gate"
+
+[tool.setuptools.packages.find]
+include = ["joint_eval"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
