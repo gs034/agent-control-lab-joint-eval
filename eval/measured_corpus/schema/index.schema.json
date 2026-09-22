@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/gs034/agent-control-lab-joint-eval/eval/measured_corpus/schema/index.schema.json",
+  "$comment": "No absolute $id. A Draft 2020-12 resolver uses the retrieval URI of this checked-out file, so rows.items $ref row.schema.json loads the adjacent file in this directory. Do not set $id to a GitHub HTML URL.",
   "title": "Agent Control Lab measured-corpus seed index (v0)",
   "description": "Seed-map envelope. Each rows[] item is validated by row.schema.json. runner_implemented is frozen false. Public/EOI claim cite is frozen to pep diligence tip 1d0f380. Brand: Agent Control Lab. Licence: Apache-2.0.",
   "type": "object",
