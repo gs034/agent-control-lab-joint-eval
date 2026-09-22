@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gs034/agent-control-lab-joint-eval/eval/measured_corpus/schema/row.schema.json",
+  "title": "Agent Control Lab measured-corpus row (v0)",
+  "description": "Contract for one threat a future three-arm runner may load. Arms are monitor-alone, host-PEP-alone, and stack. residual_asr is a null placeholder, not a filled rate. mapped requires decision DENY or ALLOW. stub and not_applicable require decision null. stub is valid only on monitor-alone. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 until a measured table and Cyber PASS.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha_or_null": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "decision_or_null": {
+      "type": ["string", "null"],
+      "enum": ["DENY", "ALLOW", null]
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "repo", "git_sha", "path"],
+      "properties": {
+        "role": {
+          "enum": ["pep_corpus", "pep_official", "supply_eval", "joint_story"]
+        },
+        "repo": {
+          "enum": [
+            "https://github.com/gs034/agent-control-lab-pep",
+            "https://github.com/gs034/agent-control-lab-supply-gate",
+            "https://github.com/gs034/agent-control-lab-joint-eval"
+          ]
+        },
+        "git_sha": { "$ref": "#/$defs/sha_or_null" },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^eval/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/?)+$"
+        },
+        "source_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "residual_asr": {
+      "description": "Nullable slot only. v0 accepts JSON null and no other value. Null means N/A. It is not a measured attack-success rate.",
+      "type": "null"
+    },
+    "tip_pins": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pep", "supply_gate", "joint"],
+      "properties": {
+        "pep": { "$ref": "#/$defs/sha_or_null" },
+        "supply_gate": { "$ref": "#/$defs/sha_or_null" },
+        "joint": { "$ref": "#/$defs/sha_or_null" }
+      }
+    },
+    "mapped_outcome": {
+      "description": "An existence-proof fixture is named for this arm. decision is DENY or ALLOW. Not valid for monitor-alone.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision", "residual_asr", "tip_pins"],
+      "properties": {
+        "status": { "const": "mapped" },
+        "decision": { "enum": ["DENY", "ALLOW"] },
+        "residual_asr": { "$ref": "#/$defs/residual_asr" },
+        "tip_pins": { "$ref": "#/$defs/tip_pins" }
+      }
+    },
+    "stub_outcome": {
+      "description": "Monitor-alone placeholder. decision is null. Not valid for host-PEP-alone or stack.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision", "residual_asr", "tip_pins"],
+      "properties": {
+        "status": { "const": "stub" },
+        "decision": { "const": null },
+        "residual_asr": { "$ref": "#/$defs/residual_asr" },
+        "tip_pins": { "$ref": "#/$defs/tip_pins" }
+      }
+    },
+    "not_applicable_outcome": {
+      "description": "This arm is not the control for the threat. decision is null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision", "residual_asr", "tip_pins"],
+      "properties": {
+        "status": { "const": "not_applicable" },
+        "decision": { "const": null },
+        "residual_asr": { "$ref": "#/$defs/residual_asr" },
+        "tip_pins": { "$ref": "#/$defs/tip_pins" }
+      }
+    }
+  },
+  "required": [
+    "threat_id",
+    "schema_version",
+    "setup",
+    "expected_effect",
+    "taxonomy",
+    "fixtures",
+    "arms",
+    "existence_proof_only",
+    "no_asr_claim",
+    "brand",
+    "licence"
+  ],
+  "properties": {
+    "threat_id": {
+      "type": "string",
+      "pattern": "^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "schema_version": { "const": "measured-corpus-row-v0" },
+    "setup": { "type": "string", "minLength": 1 },
+    "expected_effect": { "type": "string", "minLength": 1 },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "class_id", "citation", "reason_codes", "mapped_receipt_decision"],
+      "properties": {
+        "family": {
+          "enum": ["pep_deny", "supply_pin_head_verify", "noul_taxonomy", "threat_model"]
+        },
+        "class_id": { "type": "string", "minLength": 1 },
+        "citation": { "type": "string", "minLength": 1 },
+        "reason_codes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "mapped_receipt_decision": { "$ref": "#/$defs/decision_or_null" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "fixtures": {
+      "description": "Pointers only. Sibling trees are not copied into this repo.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/fixture" }
+    },
+    "arms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monitor-alone", "host-PEP-alone", "stack"],
+      "properties": {
+        "monitor-alone": {
+          "description": "stub or not_applicable, with a null decision.",
+          "oneOf": [
+            { "$ref": "#/$defs/stub_outcome" },
+            { "$ref": "#/$defs/not_applicable_outcome" }
+          ]
+        },
+        "host-PEP-alone": {
+          "description": "mapped (DENY or ALLOW) or not_applicable (null decision). stub is not valid.",
+          "oneOf": [
+            { "$ref": "#/$defs/mapped_outcome" },
+            { "$ref": "#/$defs/not_applicable_outcome" }
+          ]
+        },
+        "stack": {
+          "description": "mapped (DENY or ALLOW) or not_applicable (null decision). stub is not valid.",
+          "oneOf": [
+            { "$ref": "#/$defs/mapped_outcome" },
+            { "$ref": "#/$defs/not_applicable_outcome" }
+          ]
+        }
+      }
+    },
+    "existence_proof_only": { "const": true },
+    "no_asr_claim": { "const": true },
+    "brand": { "const": "Agent Control Lab" },
+    "licence": { "const": "Apache-2.0" },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

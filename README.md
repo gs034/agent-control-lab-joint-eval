@@ -62,6 +62,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md) and [`docs/threat-model
 
 - Named deny *classes* only (bind class [arXiv:2609.21081](https://arxiv.org/abs/2609.21081); Plugin4Shell-class supply; monitor-bypass class [arXiv:2609.19587](https://arxiv.org/abs/2609.19587)).
 - Not a measured attack-success study. No ASR.
+- [`eval/measured_corpus/`](eval/measured_corpus/) is a v0 row contract for a future three-arm runner (`monitor-alone`, `host-PEP-alone`, `stack`), not a scoreboard. Monitor-alone is a stub. Public/EOI claim cite stays pep diligence tip `1d0f380`. See [`docs/measured-corpus-v0.md`](docs/measured-corpus-v0.md).
 - Not a production control plane, marketplace, or live git host.
 - Monitors remain useful observers; they are not allow authorities in this story.
 
@@ -71,6 +72,8 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md) and [`docs/threat-model
 | --- | --- |
 | `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo` |
 | `eval/joint_story/` | Joint fixtures + frozen expected receipts |
+| `eval/measured_corpus/` | v0 row schema + seed map (future three-arm contract; not a runner) |
+| `docs/measured-corpus-v0.md` | What that contract claims and does not claim |
 | `docs/adr/ADR-0001-joint-eval-architecture.md` | Why pin-and-invoke, not vendor |
 | `docs/threat-model.md` | Threat classes by arXiv / pattern name |
 | `docs/coverage-limits.md` | What this existence-proof does not claim |
