@@ -42,13 +42,13 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
-| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `1d0f3809a4a16d4a6ac3524b287cf719f192e1f9` |
+| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `6f5c0451168dc9c25244a56789433e6ca1b53d87` |
 | `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `78cf6be05d5a1024c9b3a6179fcd55bf8c35847a` |
 
 Equivalent pip form:
 
 ```text
-agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@1d0f3809a4a16d4a6ac3524b287cf719f192e1f9
+agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@6f5c0451168dc9c25244a56789433e6ca1b53d87
 agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@78cf6be05d5a1024c9b3a6179fcd55bf8c35847a
 ```
 
