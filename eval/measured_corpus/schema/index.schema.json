@@ -28,11 +28,8 @@
     "runner_implemented": { "const": false },
     "measured_attack_success_claimed": { "const": false },
     "arms": {
-      "description": "The three arms, in canonical order.",
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
-      "items": { "enum": ["monitor-alone", "host-PEP-alone", "stack"] }
+      "description": "The three arms, frozen in canonical order. Duplicates and reordering are invalid.",
+      "const": ["monitor-alone", "host-PEP-alone", "stack"]
     },
     "claim_cite": {
       "type": "object",
@@ -51,7 +48,7 @@
       "type": "array",
       "minItems": 20,
       "maxItems": 50,
-      "items": { "type": "object" }
+      "items": { "$ref": "row.schema.json" }
     }
   }
 }

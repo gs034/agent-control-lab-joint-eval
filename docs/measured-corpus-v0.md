@@ -16,11 +16,11 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 | `setup` | What the case is |
 | `expected_effect` | Existence-proof or unmapped slot. Not a rate |
 | `arms` | `monitor-alone`, `host-PEP-alone`, `stack` |
-| Outcome `decision` | `DENY`, `ALLOW`, or JSON `null` (N/A) |
+| Outcome `decision` | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` when `status` is `stub` or `not_applicable` |
 | Outcome `residual_asr` | JSON `null` only. The slot is reserved. It is not a filled claim |
 | Outcome `tip_pins` | Sibling install SHAs when that arm is mapped. `joint` stays `null` until a diligence note records the joint tip after this contract lands |
 
-`monitor-alone` is `stub` or `not_applicable`. Its `decision` is `null`. This schema does not store a monitor score.
+`monitor-alone` is `stub` or `not_applicable`. Its `decision` is `null`. `stub` is not a valid status for `host-PEP-alone` or `stack`. This schema does not store a monitor score.
 
 `host-PEP-alone` is `mapped` only for a pep existence-proof DENY. Supply pin and HEAD-verify threats leave that arm `not_applicable`: the PEP is not the supply control.
 

@@ -3,11 +3,13 @@
 """Offline self-check for the measured-corpus v0 schema and seed map.
 
 Does not call pep, supply_gate, or a runner. The subset checker covers only
-the JSON Schema keywords this contract uses.
+the JSON Schema keywords this contract uses, including oneOf and a sibling-file
+$ref.
 """
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from pathlib import Path
@@ -37,6 +39,7 @@ _KEYWORDS = frozenset(
         "minProperties",
         "items",
         "$ref",
+        "oneOf",
     }
 )
 _ARMS = ("monitor-alone", "host-PEP-alone", "stack")
@@ -91,26 +94,66 @@ def _type_name(instance: Any) -> str:
     return type(instance).__name__
 
 
-def _resolve(schema: dict[str, Any], root: dict[str, Any]) -> dict[str, Any]:
+def _resolve(
+    schema: dict[str, Any], root: dict[str, Any], base: Path
+) -> tuple[dict[str, Any], dict[str, Any], Path]:
     ref = schema.get("$ref")
     if ref is None:
-        return schema
+        return schema, root, base
     if list(schema) != ["$ref"]:
         raise AssertionError(f"$ref must be the only key, got {sorted(schema)}")
-    if not isinstance(ref, str) or not ref.startswith("#/"):
+    if not isinstance(ref, str) or ref == "" or ref == "#":
         raise AssertionError(f"unsupported $ref: {ref}")
-    node: Any = root
-    for part in ref[2:].split("/"):
-        if not isinstance(node, dict) or part not in node:
-            raise AssertionError(f"unresolved $ref: {ref}")
-        node = node[part]
-    if not isinstance(node, dict):
+    if ref.startswith("#/"):
+        node: Any = root
+        for part in ref[2:].split("/"):
+            part = part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or part not in node:
+                raise AssertionError(f"unresolved $ref: {ref}")
+            node = node[part]
+        if not isinstance(node, dict):
+            raise AssertionError(f"$ref did not resolve to an object: {ref}")
+        return node, root, base
+    if ref.startswith("#") or "://" in ref or ref.startswith("/"):
+        raise AssertionError(f"unsupported $ref: {ref}")
+    relative = Path(ref)
+    if relative.is_absolute() or ".." in relative.parts or "#" in ref:
+        raise AssertionError(f"unsupported $ref: {ref}")
+    schema_dir = base.parent.resolve()
+    target = (schema_dir / relative).resolve()
+    if target.parent != schema_dir:
+        raise AssertionError(f"unsupported $ref: {ref}")
+    external = _load(target)
+    if not isinstance(external, dict):
         raise AssertionError(f"$ref did not resolve to an object: {ref}")
-    return node
+    return external, external, target
 
 
-def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path: str) -> list[str]:
-    schema = _resolve(schema, root)
+def _one_of(
+    instance: Any, branches: Any, root: dict[str, Any], path: str, base: Path
+) -> list[str]:
+    if not isinstance(branches, list) or not branches:
+        raise AssertionError(f"{path}: oneOf must be a non-empty array")
+    matched = 0
+    failures: list[str] = []
+    for index, branch in enumerate(branches):
+        if not isinstance(branch, dict):
+            raise AssertionError(f"{path}: oneOf entry {index} must be an object")
+        branch_errors = _validate(instance, branch, root, f"{path}<oneOf[{index}]>", base)
+        if branch_errors:
+            if len(failures) < 6:
+                failures.extend(branch_errors[:3])
+        else:
+            matched += 1
+    if matched == 1:
+        return []
+    return [f"{path}: oneOf matched {matched} schemas, expected exactly 1", *failures]
+
+
+def _validate(
+    instance: Any, schema: dict[str, Any], root: dict[str, Any], path: str, base: Path
+) -> list[str]:
+    schema, root, base = _resolve(schema, root, base)
     unknown = set(schema) - _KEYWORDS - _META
     if unknown:
         return [f"{path}: unsupported schema keywords {sorted(unknown)}"]
@@ -125,6 +168,8 @@ def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path:
     ):
         errors.append(f"{path}: expected {expected}, got {_type_name(instance)}")
         return errors
+    if "oneOf" in schema:
+        errors.extend(_one_of(instance, schema["oneOf"], root, path, base))
     if instance is None:
         return errors
     kind = _type_name(instance)
@@ -142,7 +187,7 @@ def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path:
             errors.append(f"{path}: expected at least {schema['minProperties']} properties")
         for key, sub in schema.get("properties", {}).items():
             if key in instance:
-                errors.extend(_validate(instance[key], sub, root, f"{path}.{key}"))
+                errors.extend(_validate(instance[key], sub, root, f"{path}.{key}", base))
     if kind == "string":
         if "minLength" in schema and len(instance) < schema["minLength"]:
             errors.append(f"{path}: shorter than {schema['minLength']}")
@@ -155,12 +200,14 @@ def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path:
             errors.append(f"{path}: expected at most {schema['maxItems']} items")
         if "items" in schema:
             for index, item in enumerate(instance):
-                errors.extend(_validate(item, schema["items"], root, f"{path}[{index}]"))
+                errors.extend(
+                    _validate(item, schema["items"], root, f"{path}[{index}]", base)
+                )
     return errors
 
 
-def _assert_valid(instance: Any, schema: dict[str, Any]) -> None:
-    errors = _validate(instance, schema, schema, "$")
+def _assert_valid(instance: Any, schema: dict[str, Any], base: Path) -> None:
+    errors = _validate(instance, schema, schema, "$", base)
     assert not errors, errors
 
 
@@ -170,9 +217,27 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     arms = row_schema["properties"]["arms"]
     assert list(arms["properties"]) == list(_ARMS)
     assert arms["required"] == list(_ARMS)
-    outcome = row_schema["$defs"]["outcome"]["properties"]
-    assert outcome["residual_asr"]["type"] == "null"
-    assert outcome["decision"] == {"$ref": "#/$defs/decision_or_null"}
+    defs = row_schema["$defs"]
+    assert "outcome" not in defs
+    assert defs["residual_asr"]["type"] == "null"
+    assert defs["mapped_outcome"]["properties"]["status"]["const"] == "mapped"
+    assert defs["mapped_outcome"]["properties"]["decision"]["enum"] == ["DENY", "ALLOW"]
+    assert defs["stub_outcome"]["properties"]["status"]["const"] == "stub"
+    assert defs["stub_outcome"]["properties"]["decision"]["const"] is None
+    assert defs["not_applicable_outcome"]["properties"]["status"]["const"] == "not_applicable"
+    assert defs["not_applicable_outcome"]["properties"]["decision"]["const"] is None
+    for name in ("mapped_outcome", "stub_outcome", "not_applicable_outcome"):
+        assert defs[name]["properties"]["residual_asr"] == {"$ref": "#/$defs/residual_asr"}
+    assert arms["properties"]["monitor-alone"]["oneOf"] == [
+        {"$ref": "#/$defs/stub_outcome"},
+        {"$ref": "#/$defs/not_applicable_outcome"},
+    ]
+    control_one_of = [
+        {"$ref": "#/$defs/mapped_outcome"},
+        {"$ref": "#/$defs/not_applicable_outcome"},
+    ]
+    assert arms["properties"]["host-PEP-alone"]["oneOf"] == control_one_of
+    assert arms["properties"]["stack"]["oneOf"] == control_one_of
     assert row_schema["$defs"]["decision_or_null"]["enum"] == ["DENY", "ALLOW", None]
     assert row_schema["properties"]["existence_proof_only"]["const"] is True
     assert row_schema["properties"]["no_asr_claim"]["const"] is True
@@ -181,6 +246,8 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     assert index_schema["properties"]["measured_attack_success_claimed"]["const"] is False
     assert index_schema["properties"]["rows"]["minItems"] == 20
     assert index_schema["properties"]["rows"]["maxItems"] == 50
+    assert index_schema["properties"]["rows"]["items"] == {"$ref": "row.schema.json"}
+    assert index_schema["properties"]["arms"]["const"] == list(_ARMS)
     cite = index_schema["properties"]["claim_cite"]["properties"]
     assert cite["lineage"]["const"] == "1d0f380"
     assert cite["lineage_sha"]["const"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
@@ -188,7 +255,8 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
 
 def test_seed_index_and_rows_match_schema():
     index = _load(INDEX_PATH)
-    _assert_valid(index, _load(INDEX_SCHEMA_PATH))
+    index_schema = _load(INDEX_SCHEMA_PATH)
+    _assert_valid(index, index_schema, INDEX_SCHEMA_PATH)
     row_schema = _load(ROW_SCHEMA_PATH)
     assert index["arms"] == list(_ARMS)
     assert index["claim_cite"]["lineage"] == "1d0f380"
@@ -198,7 +266,77 @@ def test_seed_index_and_rows_match_schema():
     ids = [row["threat_id"] for row in rows]
     assert len(ids) == len(set(ids))
     for row in rows:
-        _assert_valid(row, row_schema)
+        _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+
+
+def _outcome(status: str, decision: str | None) -> dict[str, Any]:
+    return {
+        "status": status,
+        "decision": decision,
+        "residual_asr": None,
+        "tip_pins": {"pep": None, "supply_gate": None, "joint": None},
+    }
+
+
+def _with_first_arm(index: dict[str, Any], arm: str, outcome: dict[str, Any]) -> dict[str, Any]:
+    cloned = copy.deepcopy(index)
+    cloned["rows"][0]["arms"][arm] = outcome
+    return cloned
+
+
+def test_index_schema_enforces_row_contract_arm_order_and_status_decision():
+    index = _load(INDEX_PATH)
+    index_schema = _load(INDEX_SCHEMA_PATH)
+    base = INDEX_SCHEMA_PATH
+
+    def errors_for(instance: dict[str, Any]) -> list[str]:
+        return _validate(instance, index_schema, index_schema, "$", base)
+
+    for arms in (
+        ["stack", "monitor-alone", "host-PEP-alone"],
+        ["monitor-alone", "monitor-alone", "stack"],
+        ["monitor-alone", "host-PEP-alone", "host-PEP-alone"],
+        ["monitor-alone", "host-PEP-alone"],
+    ):
+        reordered = copy.deepcopy(index)
+        reordered["arms"] = arms
+        errors = errors_for(reordered)
+        assert errors
+        assert any(error.startswith("$.arms") and "const" in error for error in errors)
+
+    valid_cases = (
+        ("monitor-alone", _outcome("not_applicable", None)),
+        ("host-PEP-alone", _outcome("mapped", "ALLOW")),
+        ("stack", _outcome("mapped", "ALLOW")),
+        ("stack", _outcome("not_applicable", None)),
+        ("host-PEP-alone", _outcome("not_applicable", None)),
+    )
+    for arm, outcome in valid_cases:
+        _assert_valid(_with_first_arm(index, arm, outcome), index_schema, base)
+
+    invalid_cases = (
+        ("host-PEP-alone", _outcome("mapped", None)),
+        ("stack", _outcome("mapped", None)),
+        ("monitor-alone", _outcome("stub", "DENY")),
+        ("stack", _outcome("not_applicable", "ALLOW")),
+        ("host-PEP-alone", _outcome("not_applicable", "DENY")),
+        ("stack", _outcome("stub", None)),
+        ("host-PEP-alone", _outcome("stub", None)),
+        ("monitor-alone", _outcome("mapped", "DENY")),
+        ("monitor-alone", _outcome("stub", "ALLOW")),
+    )
+    for arm, outcome in invalid_cases:
+        errors = errors_for(_with_first_arm(index, arm, outcome))
+        assert errors, arm
+        assert any(
+            error.startswith("$.rows[0].arms") and "oneOf" in error for error in errors
+        ), errors
+
+    filled = copy.deepcopy(index)
+    filled["rows"][0]["arms"]["monitor-alone"]["residual_asr"] = 0.0
+    asr_errors = errors_for(filled)
+    assert asr_errors
+    assert any("residual_asr" in error and error.startswith("$.rows[0]") for error in asr_errors)
 
 
 def test_seed_covers_pep_supply_noul_and_threat_model_classes():
