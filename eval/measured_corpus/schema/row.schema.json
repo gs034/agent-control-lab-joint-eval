@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gs034/agent-control-lab-joint-eval/eval/measured_corpus/schema/row.schema.json",
+  "title": "Agent Control Lab measured-corpus row (v0)",
+  "description": "Contract for one row a future three-arm runner may load. v0 is an existence-proof mapping, not a measured attack-success scoreboard. existence_proof_only and no_asr_claim are frozen true; lifting them requires a new schema version. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 lineage.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "fixture_path": {
+      "description": "Repo-relative pointer at an existing joint_story fixture. Do not vendor sibling trees.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^eval/joint_story/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+$"
+    }
+  },
+  "required": [
+    "id",
+    "schema_version",
+    "arm",
+    "threat_class",
+    "fixture_paths",
+    "expected_decision",
+    "taxonomy",
+    "existence_proof_only",
+    "no_asr_claim",
+    "brand",
+    "licence"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "schema_version": { "const": "measured-corpus-row-v0" },
+    "arm": {
+      "description": "Three arms. pep: host/runtime PEP (joint_story plane pep). supply_gate: supply integrity gate (joint_story plane supply-gate). joint: the composed existence-proof story, not a third package.",
+      "enum": ["pep", "supply_gate", "joint"]
+    },
+    "threat_class": { "type": "string", "minLength": 1 },
+    "fixture_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "envelope": { "$ref": "#/$defs/fixture_path" },
+        "expected_receipt": { "$ref": "#/$defs/fixture_path" },
+        "observed_head": { "$ref": "#/$defs/fixture_path" },
+        "untrusted_prose": { "$ref": "#/$defs/fixture_path" },
+        "runtime": { "$ref": "#/$defs/fixture_path" },
+        "story_index": { "$ref": "#/$defs/fixture_path" }
+      }
+    },
+    "expected_decision": {
+      "description": "Decision the mapped fixture is expected to produce. v0 seed rows are DENY. ALLOW is a legal label for a later mapped fixture; it is not an attack-success measurement.",
+      "enum": ["DENY", "ALLOW"]
+    },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "source_story_id",
+        "plane_in_story",
+        "citation",
+        "reason_codes"
+      ],
+      "properties": {
+        "source": { "const": "joint_story" },
+        "source_story_id": { "const": "acl-joint-eval-existence-proof-001" },
+        "source_row_id": { "type": "string", "minLength": 1 },
+        "plane_in_story": {
+          "description": "joint_story vocabulary. arm supply_gate maps from plane supply-gate. arm joint uses joint-story because the story index is not itself a plane.",
+          "enum": ["pep", "supply-gate", "joint-story"]
+        },
+        "citation": {
+          "description": "arXiv identifier or threat-pattern name. Not a measured result.",
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "existence_proof_only": { "const": true },
+    "no_asr_claim": { "const": true },
+    "brand": { "const": "Agent Control Lab" },
+    "licence": { "const": "Apache-2.0" },
+    "notes": { "type": "string", "minLength": 1 }
+  }
+}

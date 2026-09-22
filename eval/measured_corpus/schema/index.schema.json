@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gs034/agent-control-lab-joint-eval/eval/measured_corpus/schema/index.schema.json",
+  "title": "Agent Control Lab measured-corpus seed index (v0)",
+  "description": "Envelope for the v0 seed map. Each rows[] item is validated by row.schema.json. runner_implemented is frozen false. Public/EOI claim cite is frozen to pep diligence tip 1d0f380 lineage. Brand: Agent Control Lab. Licence: Apache-2.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "brand",
+    "licence",
+    "corpus_id",
+    "schema_version",
+    "purpose",
+    "row_schema",
+    "runner_implemented",
+    "measured_attack_success_claimed",
+    "arms",
+    "claim_cite",
+    "rows"
+  ],
+  "properties": {
+    "brand": { "const": "Agent Control Lab" },
+    "licence": { "const": "Apache-2.0" },
+    "corpus_id": { "const": "acl-measured-corpus-v0" },
+    "schema_version": { "const": "measured-corpus-v0" },
+    "purpose": { "const": "contract_for_future_three_arm_runner" },
+    "row_schema": { "const": "eval/measured_corpus/schema/row.schema.json" },
+    "runner_implemented": { "const": false },
+    "measured_attack_success_claimed": { "const": false },
+    "arms": {
+      "description": "The three arms, in canonical order.",
+      "type": "array",
+      "minItems": 3,
+      "items": { "enum": ["pep", "supply_gate", "joint"] }
+    },
+    "claim_cite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "package", "repo", "lineage", "lineage_sha", "note"],
+      "properties": {
+        "scope": { "const": "public_eoi" },
+        "package": { "const": "agent-control-lab-pep" },
+        "repo": { "const": "https://github.com/gs034/agent-control-lab-pep" },
+        "lineage": { "const": "1d0f380" },
+        "lineage_sha": { "const": "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9" },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "object" }
+    }
+  }
+}
