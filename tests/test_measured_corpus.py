@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
+
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "eval" / "measured_corpus"
 ROW_SCHEMA_PATH = CORPUS / "schema" / "row.schema.json"
@@ -31,26 +33,62 @@ _KEYWORDS = frozenset(
         "pattern",
         "minLength",
         "minItems",
+        "maxItems",
         "minProperties",
         "items",
         "$ref",
     }
 )
-_TYPES = {
-    "object": dict,
-    "string": str,
-    "array": list,
-    "boolean": bool,
-}
-
-_ARM_FROM_PLANE = {
-    "supply-gate": "supply_gate",
-    "pep": "pep",
-}
+_ARMS = ("monitor-alone", "host-PEP-alone", "stack")
+_PEP_CORPUS_DENY_IDS = frozenset(
+    {
+        "acl-pep-eval-prose-as-policy-001",
+        "acl-pep-eval-capability-spoof-001",
+        "acl-pep-eval-monitor-coax-001",
+        "acl-pep-eval-missing-policy-001",
+        "acl-pep-eval-kill-001",
+        "acl-pep-eval-late-effect-fence-001",
+        "acl-pep-eval-suspend-001",
+        "acl-pep-eval-approval-replay-001",
+        "acl-pep-eval-approval-ttl-001",
+        "acl-pep-eval-approval-binding-mismatch-001",
+    }
+)
+_SUPPLY_CASES = frozenset(
+    {
+        "plugin4shell_class",
+        "omitted_adapter_head",
+        "prose_waive_attempt",
+        "auto_latest_rejected",
+        "trust_ref_rejected",
+        "unreadable_allowlist",
+        "allow_pin_and_verify",
+    }
+)
+_NOUL_CLASSES = frozenset(
+    {"override", "no_rules_persona", "embedded_instruction", "tool_abuse"}
+)
+_TM_CLASSES = frozenset(
+    {"approve-then-mutate", "multi-session-plant", "deferred-tool"}
+)
 
 
 def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _type_name(instance: Any) -> str:
+    if instance is None:
+        return "null"
+    if isinstance(instance, bool):
+        return "boolean"
+    if isinstance(instance, str):
+        return "string"
+    if isinstance(instance, list):
+        return "array"
+    if isinstance(instance, dict):
+        return "object"
+    return type(instance).__name__
 
 
 def _resolve(schema: dict[str, Any], root: dict[str, Any]) -> dict[str, Any]:
@@ -82,18 +120,15 @@ def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path:
     if "enum" in schema and instance not in schema["enum"]:
         errors.append(f"{path}: {instance!r} not in {schema['enum']!r}")
     expected = schema.get("type")
-    if expected is not None:
-        py_type = _TYPES.get(expected)
-        if py_type is None:
-            return [f"{path}: unsupported type {expected!r}"]
-        if expected == "boolean":
-            ok = isinstance(instance, bool)
-        else:
-            ok = isinstance(instance, py_type) and not isinstance(instance, bool)
-        if not ok:
-            errors.append(f"{path}: expected {expected}, got {type(instance).__name__}")
-            return errors
-    if expected == "object":
+    if expected is not None and _type_name(instance) not in (
+        expected if isinstance(expected, list) else [expected]
+    ):
+        errors.append(f"{path}: expected {expected}, got {_type_name(instance)}")
+        return errors
+    if instance is None:
+        return errors
+    kind = _type_name(instance)
+    if kind == "object":
         if schema.get("additionalProperties") is False:
             extra = set(instance) - set(schema.get("properties", {}))
             for key in sorted(extra):
@@ -108,14 +143,16 @@ def _validate(instance: Any, schema: dict[str, Any], root: dict[str, Any], path:
         for key, sub in schema.get("properties", {}).items():
             if key in instance:
                 errors.extend(_validate(instance[key], sub, root, f"{path}.{key}"))
-    if expected == "string":
+    if kind == "string":
         if "minLength" in schema and len(instance) < schema["minLength"]:
             errors.append(f"{path}: shorter than {schema['minLength']}")
         if "pattern" in schema and re.fullmatch(schema["pattern"], instance) is None:
             errors.append(f"{path}: {instance!r} does not match {schema['pattern']}")
-    if expected == "array":
+    if kind == "array":
         if "minItems" in schema and len(instance) < schema["minItems"]:
             errors.append(f"{path}: expected at least {schema['minItems']} items")
+        if "maxItems" in schema and len(instance) > schema["maxItems"]:
+            errors.append(f"{path}: expected at most {schema['maxItems']} items")
         if "items" in schema:
             for index, item in enumerate(instance):
                 errors.extend(_validate(item, schema["items"], root, f"{path}[{index}]"))
@@ -127,60 +164,139 @@ def _assert_valid(instance: Any, schema: dict[str, Any]) -> None:
     assert not errors, errors
 
 
-def test_v0_claim_bar_and_arms_are_frozen():
+def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     row_schema = _load(ROW_SCHEMA_PATH)
     index_schema = _load(INDEX_SCHEMA_PATH)
-    props = row_schema["properties"]
-    assert props["arm"]["enum"] == ["pep", "supply_gate", "joint"]
-    assert props["expected_decision"]["enum"] == ["DENY", "ALLOW"]
-    assert props["existence_proof_only"]["const"] is True
-    assert props["no_asr_claim"]["const"] is True
-    assert props["brand"]["const"] == "Agent Control Lab"
-    assert props["licence"]["const"] == "Apache-2.0"
+    arms = row_schema["properties"]["arms"]
+    assert list(arms["properties"]) == list(_ARMS)
+    assert arms["required"] == list(_ARMS)
+    outcome = row_schema["$defs"]["outcome"]["properties"]
+    assert outcome["residual_asr"]["type"] == "null"
+    assert outcome["decision"] == {"$ref": "#/$defs/decision_or_null"}
+    assert row_schema["$defs"]["decision_or_null"]["enum"] == ["DENY", "ALLOW", None]
+    assert row_schema["properties"]["existence_proof_only"]["const"] is True
+    assert row_schema["properties"]["no_asr_claim"]["const"] is True
+    assert row_schema["properties"]["brand"]["const"] == "Agent Control Lab"
     assert index_schema["properties"]["runner_implemented"]["const"] is False
     assert index_schema["properties"]["measured_attack_success_claimed"]["const"] is False
+    assert index_schema["properties"]["rows"]["minItems"] == 20
+    assert index_schema["properties"]["rows"]["maxItems"] == 50
     cite = index_schema["properties"]["claim_cite"]["properties"]
     assert cite["lineage"]["const"] == "1d0f380"
     assert cite["lineage_sha"]["const"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
 
 
 def test_seed_index_and_rows_match_schema():
-    index_schema = _load(INDEX_SCHEMA_PATH)
+    index = _load(INDEX_PATH)
+    _assert_valid(index, _load(INDEX_SCHEMA_PATH))
     row_schema = _load(ROW_SCHEMA_PATH)
-    index = _load(INDEX_PATH)
-    _assert_valid(index, index_schema)
-    assert index["arms"] == ["pep", "supply_gate", "joint"]
+    assert index["arms"] == list(_ARMS)
     assert index["claim_cite"]["lineage"] == "1d0f380"
-    ids = [row["id"] for row in index["rows"]]
+    assert "Cyber PASS" in index["claim_cite"]["note"]
+    rows = index["rows"]
+    assert 20 <= len(rows) <= 50
+    ids = [row["threat_id"] for row in rows]
     assert len(ids) == len(set(ids))
-    arms = {row["arm"] for row in index["rows"]}
-    assert arms == {"pep", "supply_gate", "joint"}
-    for row in index["rows"]:
+    for row in rows:
         _assert_valid(row, row_schema)
-        for rel in row["fixture_paths"].values():
-            path = ROOT / rel
-            assert path.is_file(), rel
+
+
+def test_seed_covers_pep_supply_noul_and_threat_model_classes():
+    rows = _load(INDEX_PATH)["rows"]
+    by_family: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        by_family.setdefault(row["taxonomy"]["family"], []).append(row)
+    assert len(by_family["pep_deny"]) == 11
+    assert len(by_family["supply_pin_head_verify"]) == 7
+    assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
+    assert {row["taxonomy"]["class_id"] for row in by_family["threat_model"]} == _TM_CLASSES
+
+    pep_ids = {
+        fixture["source_id"]
+        for row in by_family["pep_deny"]
+        for fixture in row["fixtures"]
+        if fixture["role"] == "pep_corpus"
+    }
+    assert pep_ids == _PEP_CORPUS_DENY_IDS
+    official = [
+        fixture["source_id"]
+        for row in by_family["pep_deny"]
+        for fixture in row["fixtures"]
+        if fixture["role"] == "pep_official"
+    ]
+    assert set(official) == {"acl-pep-eval-2609-19587-class-001"}
+    supply_ids = {
+        fixture["source_id"]
+        for row in by_family["supply_pin_head_verify"]
+        for fixture in row["fixtures"]
+        if fixture["role"] == "supply_eval"
+    }
+    assert supply_ids == _SUPPLY_CASES
+
+
+def test_arm_outcomes_stay_unmeasured():
+    rows = _load(INDEX_PATH)["rows"]
+    for row in rows:
+        monitor = row["arms"]["monitor-alone"]
+        assert monitor["status"] in {"stub", "not_applicable"}
+        assert monitor["decision"] is None
+        assert monitor["residual_asr"] is None
+        assert monitor["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
+        for arm_name in _ARMS:
+            arm = row["arms"][arm_name]
+            assert arm["residual_asr"] is None
+            assert arm["tip_pins"]["joint"] is None
+            for label, sha in (("pep", PEP_SHA), ("supply_gate", SUPPLY_GATE_SHA)):
+                pinned = arm["tip_pins"][label]
+                if pinned is not None:
+                    assert pinned == sha
+            if arm["status"] == "mapped":
+                assert arm["decision"] in {"DENY", "ALLOW"}
+            else:
+                assert arm["decision"] is None
+        host = row["arms"]["host-PEP-alone"]
+        stack = row["arms"]["stack"]
+        joint_fixtures = [item for item in row["fixtures"] if item["role"] == "joint_story"]
+        if joint_fixtures:
+            assert stack["status"] == "mapped"
+            assert stack["decision"] == "DENY"
+            assert stack["tip_pins"]["pep"] == PEP_SHA
+            assert stack["tip_pins"]["supply_gate"] == SUPPLY_GATE_SHA
+        else:
+            assert stack["decision"] is None
+        family = row["taxonomy"]["family"]
+        if family == "pep_deny":
+            assert host["status"] == "mapped"
+            assert host["decision"] == "DENY"
+            assert host["tip_pins"]["pep"] == PEP_SHA
+            assert row["taxonomy"]["mapped_receipt_decision"] == "DENY"
+        elif family == "supply_pin_head_verify":
+            assert host["status"] == "not_applicable"
+            assert host["decision"] is None
+        else:
+            assert row["taxonomy"]["mapped_receipt_decision"] in {"DENY", "ALLOW", None}
+        if row["taxonomy"]["mapped_receipt_decision"] is None:
+            assert row["fixtures"] == []
+            assert host["decision"] is None
+            assert stack["decision"] is None
+
+
+def test_fixture_pointers_do_not_vendor_sibling_trees():
+    rows = _load(INDEX_PATH)["rows"]
+    assert not (ROOT / "pep").exists()
+    assert not (ROOT / "supply_gate").exists()
+    for row in rows:
+        for fixture in row["fixtures"]:
+            rel = fixture["path"]
             assert ".." not in Path(rel).parts
-
-
-def test_seed_rows_map_joint_story_classes():
-    index = _load(INDEX_PATH)
-    story = _load(ROOT / "eval" / "joint_story" / "index.json")
-    story_rows = {row["id"]: row for row in story["rows"]}
-    mapped = [row for row in index["rows"] if row["arm"] != "joint"]
-    assert {row["taxonomy"]["source_row_id"] for row in mapped} == set(story_rows)
-    joint_rows = [row for row in index["rows"] if row["arm"] == "joint"]
-    assert len(joint_rows) == 1
-    joint = joint_rows[0]
-    assert "source_row_id" not in joint["taxonomy"]
-    assert joint["fixture_paths"] == {"story_index": "eval/joint_story/index.json"}
-    assert joint["expected_decision"] == "DENY"
-    for row in mapped:
-        source = story_rows[row["taxonomy"]["source_row_id"]]
-        assert row["arm"] == _ARM_FROM_PLANE[source["plane"]]
-        assert row["taxonomy"]["plane_in_story"] == source["plane"]
-        assert row["threat_class"] == source["threat_class"]
-        assert row["expected_decision"] == source["expected_decision"]
-        directory = source["dir"]
-        for rel in row["fixture_paths"].values():
-            assert rel.startswith(f"eval/joint_story/{directory}/")
+            assert rel.startswith("eval/")
+            if fixture["repo"].endswith("agent-control-lab-pep"):
+                assert fixture["git_sha"] == PEP_SHA
+                assert not (ROOT / rel).exists()
+            elif fixture["repo"].endswith("agent-control-lab-supply-gate"):
+                assert fixture["git_sha"] == SUPPLY_GATE_SHA
+                assert not (ROOT / rel).exists()
+            else:
+                assert fixture["git_sha"] is None
+                path = ROOT / rel
+                assert path.exists(), rel

@@ -6,29 +6,21 @@ JSON Schema (draft 2020-12):
 
 | File | What it checks |
 | --- | --- |
-| [`row.schema.json`](row.schema.json) | One corpus row |
-| [`index.schema.json`](index.schema.json) | Seed-map envelope (`rows[]` items use the row schema) |
+| [`row.schema.json`](row.schema.json) | One threat row |
+| [`index.schema.json`](index.schema.json) | Seed envelope (`rows[]` length 20–50; each item uses the row schema) |
 
-## Row fields
+## Frozen fields
 
 | Field | Rule |
 | --- | --- |
-| `id` | Stable id, `acl-mc-…` |
-| `schema_version` | Frozen `measured-corpus-row-v0` |
-| `arm` | `pep`, `supply_gate`, or `joint` |
-| `threat_class` | Class label (pattern name or short class string) |
-| `fixture_paths` | One or more pointers under `eval/joint_story/` |
-| `expected_decision` | `DENY` or `ALLOW` |
-| `taxonomy` | `joint_story` source, story id, plane tag, citation, reason codes |
-| `existence_proof_only` | Frozen `true` |
-| `no_asr_claim` | Frozen `true` |
-| `brand` / `licence` | `Agent Control Lab` / `Apache-2.0` |
-| `notes` | Optional prose. Not policy. |
+| `threat_id` | `acl-mc-…` |
+| `setup` | Case description |
+| `expected_effect` | Existence-proof wording or an unmapped slot |
+| `arms` | Object with `monitor-alone`, `host-PEP-alone`, and `stack` |
+| `decision` | `DENY`, `ALLOW`, or `null` |
+| `residual_asr` | `null` only (N/A placeholder) |
+| `tip_pins` | `pep`, `supply_gate`, and `joint` SHAs or `null` |
 
-## Arms
+`monitor-alone` does not carry a decision in the v0 seed. `residual_asr` has no numeric form in this schema. A measured table would be a new schema version, and the public/EOI cite stays `1d0f380` until that table exists and Cyber has passed it.
 
-`pep` maps joint_story plane `pep`. `supply_gate` maps joint_story plane `supply-gate`. `joint` is the composed story (both planes), not a third package. `taxonomy.plane_in_story` keeps the joint_story spelling (`supply-gate`, `joint-story`).
-
-`fixture_paths` may name `envelope`, `expected_receipt`, `observed_head`, `untrusted_prose`, `runtime`, or `story_index`. Paths stay inside `eval/joint_story/`. Sibling `eval/corpus/` trees are not copied here.
-
-Claim-bar flags cannot be set false in this schema. A measured scoreboard would be a new schema version. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md).
+Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md).

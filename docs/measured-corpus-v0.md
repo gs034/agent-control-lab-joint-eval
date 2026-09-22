@@ -4,53 +4,54 @@
 
 ## Purpose
 
-v0 is a **contract** for a future three-arm runner: a JSON Schema for one corpus row, and a small seed map that points existing joint existence-proof classes at that schema.
-
-It is not the runner. Nothing in this tree executes the seed. It is not a measured attack-success rate, not a classifier scoreboard, and not a paper reproduction. **No ASR.**
+v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 25 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.**
 
 The official existence-proof remains `python -m joint_eval.demo` over `eval/joint_story/`. See [`docs/coverage-limits.md`](coverage-limits.md).
 
-## Three arms
+## Row fields
 
-| Arm | What a future runner would call | How the seed maps it |
-| --- | --- | --- |
-| `pep` | Pinned `agent-control-lab-pep` (`pep.evaluate` / `pep.gated_invoke`) | joint_story plane `pep` |
-| `supply_gate` | Pinned `agent-control-lab-supply-gate` (`supply_gate.evaluate`) | joint_story plane `supply-gate` |
-| `joint` | Both planes, as the scripted joint story already does | The story index itself, not a third package |
+| Field | v0 rule |
+| --- | --- |
+| `threat_id` | Stable id, `acl-mc-…` |
+| `setup` | What the case is |
+| `expected_effect` | Existence-proof or unmapped slot. Not a rate |
+| `arms` | `monitor-alone`, `host-PEP-alone`, `stack` |
+| Outcome `decision` | `DENY`, `ALLOW`, or JSON `null` (N/A) |
+| Outcome `residual_asr` | JSON `null` only. The slot is reserved. It is not a filled claim |
+| Outcome `tip_pins` | Sibling install SHAs when that arm is mapped. `joint` stays `null` until a diligence note records the joint tip after this contract lands |
 
-`arm` is the corpus tag. `taxonomy.plane_in_story` keeps the joint_story spelling (`pep`, `supply-gate`, `joint-story`).
+`monitor-alone` is `stub` or `not_applicable`. Its `decision` is `null`. This schema does not store a monitor score.
+
+`host-PEP-alone` is `mapped` only for a pep existence-proof DENY. Supply pin and HEAD-verify threats leave that arm `not_applicable`: the PEP is not the supply control.
+
+`stack` is `mapped` only where `eval/joint_story/` already has a fixture for that class. Other stack outcomes stay `null`.
 
 ## Seed map
 
-[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) lists five rows:
+[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 25 rows:
 
-- Plugin4Shell-class supply DENY
-- pin-without-verify supply DENY
-- monitor-bypass / prose-as-policy PEP DENY
-- approval-binding mismatch PEP DENY (bind class)
-- one `joint` row pointing at `eval/joint_story/index.json`
+- 11 pep DENY rows (10 `eval/corpus/` classes plus the official `eval/` deny row), pinned at the pep install SHA
+- 7 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture), pinned at the supply-gate install SHA
+- 4 Noul taxonomy slots: `override`, `no_rules_persona`, `embedded_instruction`, `tool_abuse`. No fixture and no arm decision. They are class labels, not scores
+- 3 threat-model classes: `approve-then-mutate` (same existence-proof as pep approval binding, not a second trial), `multi-session-plant`, `deferred-tool` (no fixture)
 
-Fixture paths are pointers. Sibling `eval/corpus/` and supply-gate matrices stay in those repositories. This seed is enough to prove the row contract. It is not a full matrix.
+Pointers name sibling paths and joint_story paths. Sibling trees are not copied. The two unmapped threat-model classes and the four Noul slots are in the map so the contract names them. They are not results.
 
-`expected_decision` may be `DENY` or `ALLOW`. Every v0 seed row is `DENY`, because that is what the mapped fixtures are. An `ALLOW` label would still not be an attack-success measurement.
+`approve-then-mutate` is the threat-model name for the pep approval-binding DENY. `multi-session-plant` and `deferred-tool` are not the same row as `late_effect_fence`.
 
 ## Claim cite
 
-Public/EOI claim cite stays the pep diligence tip **`1d0f380`** lineage:
+Public/EOI claim cite stays pep diligence tip **`1d0f380`** (`1d0f3809a4a16d4a6ac3524b287cf719f192e1f9`) until there is a measured table and Cyber PASS.
 
-`1d0f3809a4a16d4a6ac3524b287cf719f192e1f9` on [agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep).
+This seed does not lift that bar. `existence_proof_only` and `no_asr_claim` are frozen `true`. `residual_asr` cannot hold a number in this schema. `runner_implemented` and `measured_attack_success_claimed` are frozen `false`.
 
-This corpus does not lift that claim bar. On every v0 row the schema freezes:
-
-- `existence_proof_only`: `true`
-- `no_asr_claim`: `true`
-
-The seed envelope also freezes `runner_implemented: false` and `measured_attack_success_claimed: false`. Sibling install pins in `joint_eval/pins.py` are how this harness installs packages. They are not a claim cite, and this document does not bump them.
+Install pins in `joint_eval/pins.py` are how this harness installs packages. A row may copy those SHAs into `tip_pins` when an arm is mapped to that package. `tip_pins.joint` is `null` in v0. After this contract is on the joint repo tip, a later diligence note may record that tip. Recording it does not change the `1d0f380` claim cite.
 
 ## Out of this contract
 
-- A three-arm runner or any harness execution loop
+- A three-arm runner or any harness loop
 - GitHub Actions workflow edits
-- ASR numbers, classifier scoreboards, or external benchmark metrics
+- A filled residual ASR, a monitor score, or any other metric
 - Copies of sibling fixture trees
+- Payments-domain cases
 - Changes to coverage-limit or EOI claim prose elsewhere in this repo

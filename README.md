@@ -62,7 +62,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md) and [`docs/threat-model
 
 - Named deny *classes* only (bind class [arXiv:2609.21081](https://arxiv.org/abs/2609.21081); Plugin4Shell-class supply; monitor-bypass class [arXiv:2609.19587](https://arxiv.org/abs/2609.19587)).
 - Not a measured attack-success study. No ASR.
-- [`eval/measured_corpus/`](eval/measured_corpus/) is a v0 row contract for a future three-arm runner, not a scoreboard. Public/EOI claim cite stays pep diligence tip `1d0f380`. See [`docs/measured-corpus-v0.md`](docs/measured-corpus-v0.md).
+- [`eval/measured_corpus/`](eval/measured_corpus/) is a v0 row contract for a future three-arm runner (`monitor-alone`, `host-PEP-alone`, `stack`), not a scoreboard. Monitor-alone is a stub. Public/EOI claim cite stays pep diligence tip `1d0f380`. See [`docs/measured-corpus-v0.md`](docs/measured-corpus-v0.md).
 - Not a production control plane, marketplace, or live git host.
 - Monitors remain useful observers; they are not allow authorities in this story.
 
