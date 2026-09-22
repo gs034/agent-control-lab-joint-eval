@@ -58,7 +58,7 @@ Pins are also listed in `joint_eval/pins.py`. Bump both files together.
 
 ## Coverage limits
 
-See [`docs/coverage-limits.md`](docs/coverage-limits.md) and [`docs/threat-model.md`](docs/threat-model.md). Short version:
+See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md`](docs/threat-model.md), and the Lab-wide synthesis across both planes, [`docs/lab-threat-model.md`](docs/lab-threat-model.md). Short version:
 
 - Named deny *classes* only (bind class [arXiv:2609.21081](https://arxiv.org/abs/2609.21081); Plugin4Shell-class supply; monitor-bypass class [arXiv:2609.19587](https://arxiv.org/abs/2609.19587)).
 - Not a measured attack-success study. No ASR.
@@ -76,6 +76,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md) and [`docs/threat-model
 | `docs/measured-corpus-v0.md` | What that contract claims and does not claim |
 | `docs/adr/ADR-0001-joint-eval-architecture.md` | Why pin-and-invoke, not vendor |
 | `docs/threat-model.md` | Threat classes by arXiv / pattern name |
+| `docs/lab-threat-model.md` | Lab-wide threat model: both planes, trust boundaries, comparison with sandboxing / least privilege / monitoring, non-goals |
 | `docs/coverage-limits.md` | What this existence-proof does not claim |
 | `scripts/lab_brand_wall.py` | Packed Lab-only keep-out (stdlib Python) |
 | `CONTRIBUTING.md` | Lab-only keep-out |
