@@ -93,7 +93,7 @@ Each key is optional. The value is a trial count: JSON `null`, or an integer ≥
 
 ### `table_id`
 
-Optional. Type string or JSON `null`. A string has minimum length 1; the empty string is invalid. It is a measured-table id. JSON `null` when no table is recorded. This delta stores no table.
+Optional. Type string or JSON `null`. A string has minimum length 1; the empty string is invalid. `acl-mediation-binding-v1` names the mediation-outcome binding in [`../binding.json`](../binding.json). It is not a measured attack-success table. JSON `null` when unset. This id does not change the `1d0f380` claim cite.
 
 ### `plane`
 
@@ -110,3 +110,5 @@ Optional Lab plane for this row. The value is `host`, `supply`, `joint`, `comple
 `plane` is not a `joint_story` step label. `pep` and `supply-gate` are not `plane` values.
 
 Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md). That filename is historical (v0 seed doc). The v1 field definitions live in this schema README.
+
+The mediation binding ([`../binding.md`](../binding.md), [`../binding.json`](../binding.json)) maps each threat to an arm `status` and `decision` using the vocabulary above. `representation_mismatch` is `not_mediated` on every arm.

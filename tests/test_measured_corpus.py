@@ -26,6 +26,40 @@ CORPUS = ROOT / "eval" / "measured_corpus"
 ROW_SCHEMA_PATH = CORPUS / "schema" / "row.schema.json"
 INDEX_SCHEMA_PATH = CORPUS / "schema" / "index.schema.json"
 INDEX_PATH = CORPUS / "index.json"
+BINDING_PATH = CORPUS / "binding.json"
+BINDING_DOC_PATH = CORPUS / "binding.md"
+_REPRESENTATION_MISMATCH_ID = "acl-mc-representation-mismatch-001"
+_BINDING_TABLE_ID = "acl-mediation-binding-v1"
+_V0_THREAT_IDS = (
+    "acl-mc-pep-prose-as-policy-001",
+    "acl-mc-pep-capability-spoof-001",
+    "acl-mc-pep-monitor-coax-001",
+    "acl-mc-pep-missing-policy-001",
+    "acl-mc-pep-kill-001",
+    "acl-mc-pep-late-effect-fence-001",
+    "acl-mc-pep-suspend-001",
+    "acl-mc-pep-approval-replay-001",
+    "acl-mc-pep-approval-ttl-001",
+    "acl-mc-pep-approval-binding-001",
+    "acl-mc-pep-official-deny-001",
+    "acl-mc-supply-plugin4shell-class-001",
+    "acl-mc-supply-omitted-adapter-head-001",
+    "acl-mc-supply-prose-waive-001",
+    "acl-mc-supply-auto-latest-rejected-001",
+    "acl-mc-supply-trust-ref-rejected-001",
+    "acl-mc-supply-unreadable-allowlist-001",
+    "acl-mc-supply-pin-and-verify-allow-001",
+    "acl-mc-noul-override-001",
+    "acl-mc-noul-no-rules-persona-001",
+    "acl-mc-noul-embedded-instruction-001",
+    "acl-mc-noul-tool-abuse-001",
+    "acl-mc-tm-approve-then-mutate-001",
+    "acl-mc-tm-multi-session-plant-001",
+    "acl-mc-tm-deferred-tool-001",
+    "acl-mc-supply-mcp-server-unpinned-001",
+    "acl-mc-supply-skill-shell-preapproved-001",
+    "acl-mc-supply-hook-update-unverified-001",
+)
 
 _META = frozenset({"$schema", "$id", "$defs", "title", "description", "$comment"})
 _KEYWORDS = frozenset(
@@ -84,8 +118,15 @@ _NOUL_CLASSES = frozenset(
     {"override", "no_rules_persona", "embedded_instruction", "tool_abuse"}
 )
 _TM_CLASSES = frozenset(
-    {"approve-then-mutate", "multi-session-plant", "deferred-tool"}
+    {
+        "approve-then-mutate",
+        "multi-session-plant",
+        "deferred-tool",
+        "representation_mismatch",
+    }
 )
+_STATUS_VOCABULARY = ("mapped", "stub", "not_applicable", "not_mediated")
+_PLANE_VOCABULARY = ("host", "supply", "joint", "complementarity")
 
 
 def _load(path: Path) -> Any:
@@ -410,13 +451,16 @@ def test_seed_index_and_rows_match_schema():
     assert 20 <= len(rows) <= 50
     ids = [row["threat_id"] for row in rows]
     assert len(ids) == len(set(ids))
-    for row in rows:
+    assert ids[:-1] == list(_V0_THREAT_IDS)
+    assert ids[-1] == _REPRESENTATION_MISMATCH_ID
+    for row in rows[:-1]:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
         assert row["schema_version"] == "measured-corpus-row-v0"
         assert row["existence_proof_only"] is True
         assert row["no_asr_claim"] is True
         for name in ("benign_twin_of", "table_id", "plane", *_COUNTERS):
             assert name not in row
+    _assert_valid(rows[-1], row_schema, ROW_SCHEMA_PATH)
 
 
 def _outcome(
@@ -585,7 +629,14 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     assert len(by_family["pep_deny"]) == 11
     assert len(by_family["supply_pin_head_verify"]) == 10
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
-    assert {row["taxonomy"]["class_id"] for row in by_family["threat_model"]} == _TM_CLASSES
+    threat_rows = {row["taxonomy"]["class_id"]: row for row in by_family["threat_model"]}
+    assert set(threat_rows) == _TM_CLASSES
+    for class_id, row in threat_rows.items():
+        if class_id == "representation_mismatch":
+            assert row["taxonomy"]["mapped_receipt_decision"] is None
+            assert row["taxonomy"]["reason_codes"] == []
+        else:
+            assert row["taxonomy"]["mapped_receipt_decision"] == "DENY"
 
     pep_ids = {
         fixture["source_id"]
@@ -614,7 +665,13 @@ def test_arm_outcomes_stay_unmeasured():
     rows = _load(INDEX_PATH)["rows"]
     for row in rows:
         monitor = row["arms"]["monitor-alone"]
-        assert monitor["status"] in {"stub", "not_applicable"}
+        if row["schema_version"] == "measured-corpus-row-v0":
+            assert monitor["status"] in {"stub", "not_applicable"}
+            for arm in row["arms"].values():
+                assert arm["status"] != "not_mediated"
+        else:
+            assert row["threat_id"] == _REPRESENTATION_MISMATCH_ID
+            assert monitor["status"] == "not_mediated"
         assert monitor["decision"] is None
         assert monitor["residual_asr"] is None
         assert monitor["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
@@ -801,3 +858,112 @@ def test_v1_benign_twin_of_round_trips():
     row["table_id"] = ""
     errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
     assert any("table_id" in error for error in errors), errors
+
+
+def _plane_for(row: dict[str, Any]) -> str:
+    if any(fixture["role"] == "joint_story" for fixture in row["fixtures"]):
+        return "joint"
+    family = row["taxonomy"]["family"]
+    class_id = row["taxonomy"]["class_id"]
+    if family == "pep_deny":
+        return "host"
+    if family == "supply_pin_head_verify":
+        return "supply"
+    if family == "threat_model" and class_id != "representation_mismatch":
+        return "host"
+    return "complementarity"
+
+
+def _documented_example_row() -> dict[str, Any]:
+    text = BINDING_DOC_PATH.read_text(encoding="utf-8")
+    match = re.search(r"```json\n(.*?)\n```", text, re.S)
+    assert match, "binding doc needs one json example row"
+    example = json.loads(match.group(1))
+    assert isinstance(example, dict)
+    return example
+
+
+def test_binding_table_matches_seed_arms_and_vocabulary():
+    index = _load(INDEX_PATH)
+    binding = _load(BINDING_PATH)
+    assert binding["brand"] == "Agent Control Lab"
+    assert binding["licence"] == "Apache-2.0"
+    assert binding["table_id"] == _BINDING_TABLE_ID
+    assert binding["kind"] == "mediation_outcome_binding"
+    assert binding["measured_attack_success_claimed"] is False
+    assert binding["claim_cite_lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+    assert binding["status_vocabulary"] == list(_STATUS_VOCABULARY)
+    assert binding["decision_vocabulary"] == ["DENY", "ALLOW", None]
+    assert binding["plane_vocabulary"] == list(_PLANE_VOCABULARY)
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            assert "residual_asr" not in node
+            for value in node.values():
+                walk(value)
+            return
+        if isinstance(node, list):
+            for value in node:
+                walk(value)
+            return
+        assert not isinstance(node, float)
+
+    walk(binding)
+    seed_rows = index["rows"]
+    bound = binding["rows"]
+    assert [item["threat_id"] for item in bound] == [row["threat_id"] for row in seed_rows]
+    planes = set()
+    for seed, item in zip(seed_rows, bound):
+        assert item["schema_version"] == seed["schema_version"]
+        assert item["family"] == seed["taxonomy"]["family"]
+        assert item["class_id"] == seed["taxonomy"]["class_id"]
+        assert item["plane"] == _plane_for(seed)
+        assert item["plane"] in _PLANE_VOCABULARY
+        planes.add(item["plane"])
+        assert list(item["arms"]) == list(_ARMS)
+        for arm_name in _ARMS:
+            outcome = item["arms"][arm_name]
+            assert set(outcome) == {"status", "decision"}
+            assert outcome["status"] == seed["arms"][arm_name]["status"]
+            assert outcome["status"] in _STATUS_VOCABULARY
+            assert outcome["decision"] == seed["arms"][arm_name]["decision"]
+            if outcome["status"] == "mapped":
+                assert outcome["decision"] in {"DENY", "ALLOW"}
+            else:
+                assert outcome["decision"] is None
+    assert planes == set(_PLANE_VOCABULARY)
+
+
+def test_representation_mismatch_not_mediated_row_validates():
+    index = _load(INDEX_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    seed = index["rows"][-1]
+    example = _documented_example_row()
+    assert example == seed
+    _assert_valid(seed, row_schema, ROW_SCHEMA_PATH)
+    _assert_valid(example, row_schema, ROW_SCHEMA_PATH)
+
+    assert seed["threat_id"] == _REPRESENTATION_MISMATCH_ID
+    assert seed["schema_version"] == "measured-corpus-row-v1"
+    assert seed["taxonomy"]["family"] == "threat_model"
+    assert seed["taxonomy"]["class_id"] == "representation_mismatch"
+    assert seed["taxonomy"]["mapped_receipt_decision"] is None
+    assert seed["taxonomy"]["reason_codes"] == []
+    assert seed["fixtures"] == []
+    assert seed["existence_proof_only"] is True
+    assert seed["no_asr_claim"] is True
+    assert seed["benign_twin_of"] is None
+    assert seed["table_id"] == _BINDING_TABLE_ID
+    assert seed["plane"] == "complementarity"
+    for name in _COUNTERS:
+        assert seed[name] is None
+    for arm_name in _ARMS:
+        arm = seed["arms"][arm_name]
+        assert arm["status"] == "not_mediated"
+        assert arm["decision"] is None
+        assert arm["residual_asr"] is None
+        assert arm["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert len(_V0_THREAT_IDS) == 28
