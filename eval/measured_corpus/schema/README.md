@@ -70,6 +70,8 @@ Each arm is an outcome with `status`, `decision`, `residual_asr`, and `tip_pins`
 
 The public/EOI claim cite stays the pep diligence tip. On the seed index, `claim_cite.lineage` is `1d0f380` and `claim_cite.lineage_sha` is `1d0f3809a4a16d4a6ac3524b287cf719f192e1f9` (`claim_cite.scope` is `public_eoi`; `claim_cite.package` is `agent-control-lab-pep`). This delta does not change that cite. It stays until a measured table exists and Cyber has passed it.
 
+Cyber card C4 is the adopted Lab ASR rule (Cyber §4 CLEAN / Glenn decision), restated in `ACL_Metric_Definitions_Note_B3_2026-09-23`. ASR letters are admissible only for `monitor-alone` and `stack`, only with a stated attack-variant generator (not authored fixtures alone), only with status `not_mediated` counted as reached, and only after a Cyber pass records `table_id`. `host-PEP-alone` is always a coverage fraction or counts, never ASR. Until that pass, Lab prose writes "reached-tool fraction" or publishes counts. This schema still stores `residual_asr` as JSON `null` only and keeps `no_asr_claim` `true`.
+
 ### `benign_twin_of`
 
 Optional. Type string or JSON `null`. The string is a `threat_id`: the same pattern `^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$`. It is a pointer to the attack row this benign row twins. JSON `null` if this row is not a benign twin. This delta does not add benign-twin rows.
@@ -107,4 +109,4 @@ Optional Lab plane for this row. The value is `host`, `supply`, `joint`, `comple
 
 `plane` is not a `joint_story` step label. `pep` and `supply-gate` are not `plane` values.
 
-Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md).
+Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md). That filename is historical (v0 seed doc). The v1 field definitions live in this schema README.
