@@ -42,19 +42,28 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
-| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `6f5c0451168dc9c25244a56789433e6ca1b53d87` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `78cf6be05d5a1024c9b3a6179fcd55bf8c35847a` |
+| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `ffd048a228dd2c8193418db6bebbab7cd339cd08` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `938769656e7cb311d1953dee9df22b79275e6c09` |
 
 Equivalent pip form:
 
 ```text
-agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@6f5c0451168dc9c25244a56789433e6ca1b53d87
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@78cf6be05d5a1024c9b3a6179fcd55bf8c35847a
+agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@ffd048a228dd2c8193418db6bebbab7cd339cd08
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@938769656e7cb311d1953dee9df22b79275e6c09
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
 
 Pins are also listed in `joint_eval/pins.py`. Bump both files together.
+
+**Updating an existing environment.** pip keeps an already-installed sibling whose version number has not changed, so after a pin bump `python -m pip install -e ".[dev]"` can leave the old commit in `site-packages`. `tests/test_installed_pins.py` reads pip's install record (PEP 610 `direct_url.json`) and fails when the installed commit is not the pinned one. Recovery:
+
+```bash
+python -m pip uninstall -y agent-control-lab-pep agent-control-lab-supply-gate
+python -m pip install -e ".[dev]"
+```
+
+A fresh environment (the CI runner is one) needs no extra step.
 
 ## Coverage limits
 

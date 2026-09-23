@@ -4,7 +4,7 @@
 
 ## Purpose
 
-v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 25 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.**
+v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.**
 
 The official existence-proof remains `python -m joint_eval.demo` over `eval/joint_story/`. See [`docs/coverage-limits.md`](coverage-limits.md).
 
@@ -28,16 +28,16 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 
 ## Seed map
 
-[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 25 rows:
+[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 28 rows:
 
 - 11 pep DENY rows (10 `eval/corpus/` classes plus the official `eval/` deny row), pinned at the pep install SHA
-- 7 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture), pinned at the supply-gate install SHA
+- 10 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture, plus the three v0.4 manifest DENY fixtures), pinned at the supply-gate install SHA
 - 4 Noul taxonomy slots: `override`, `no_rules_persona`, `embedded_instruction`, `tool_abuse`. No fixture and no arm decision. They are class labels, not scores
-- 3 threat-model classes: `approve-then-mutate` (same existence-proof as pep approval binding, not a second trial), `multi-session-plant`, `deferred-tool` (no fixture)
+- 3 threat-model classes, each mapped to its own pep corpus row: `approve-then-mutate` (approval_state_mismatch, pep v0.3.3), `multi-session-plant` (approval_invalid), `deferred-tool` (approval_expired)
 
-Pointers name sibling paths and joint_story paths. Sibling trees are not copied. The two unmapped threat-model classes and the four Noul slots are in the map so the contract names them. They are not results.
+Pointers name sibling paths and joint_story paths. Sibling trees are not copied. The four Noul slots are in the map so the contract names them. They are not results.
 
-`approve-then-mutate` is the threat-model name for the pep approval-binding DENY. `multi-session-plant` and `deferred-tool` are not the same row as `late_effect_fence`.
+`approve-then-mutate` is the state-substitution existence proof, distinct from the args-substitution row `approval_binding`. `multi-session-plant` and `deferred-tool` add no mechanism: they are `approval_invalid` and `approval_expired` with threat-model stories, and are not the same row as `late_effect_fence`.
 
 ## Claim cite
 

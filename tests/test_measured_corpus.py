@@ -70,6 +70,9 @@ _SUPPLY_CASES = frozenset(
         "trust_ref_rejected",
         "unreadable_allowlist",
         "allow_pin_and_verify",
+        "mcp_server_unpinned",
+        "skill_shell_preapproved",
+        "hook_update_unverified",
     }
 )
 _NOUL_CLASSES = frozenset(
@@ -506,7 +509,7 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     for row in rows:
         by_family.setdefault(row["taxonomy"]["family"], []).append(row)
     assert len(by_family["pep_deny"]) == 11
-    assert len(by_family["supply_pin_head_verify"]) == 7
+    assert len(by_family["supply_pin_head_verify"]) == 10
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
     assert {row["taxonomy"]["class_id"] for row in by_family["threat_model"]} == _TM_CLASSES
 
