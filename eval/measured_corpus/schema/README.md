@@ -27,21 +27,84 @@ Neither schema sets an absolute `$id`. Load the checked-out `index.schema.json` 
 
 Seed rows keep `schema_version` `measured-corpus-row-v0` and do not need the v1 fields. `measured-corpus-row-v1` is the same object with those fields filled in when a later row has them.
 
-## v1 delta fields
+## Field definitions
 
-Chosen counter names are the Evidence Corpus Plan appendix B set, one snake_case form, recorded once on the row (not repeated inside each arm):
+Names below are the schema keys. This note does not add fields, DENY classes, or a filled rate.
 
-| Field | Rule |
+### `schema_version`
+
+`schema_version` is `measured-corpus-row-v0` or `measured-corpus-row-v1`.
+
+`measured-corpus-row-v0` is the seed-row value. Those rows omit the v1 keys. `measured-corpus-row-v1` is the same contract plus the optional fields in this section. Both strings validate against [`row.schema.json`](row.schema.json). The seed index `schema_version` stays `measured-corpus-v0`.
+
+### Arms
+
+`arms` is an object whose keys are exactly `monitor-alone`, `host-PEP-alone`, and `stack`. The seed index freezes that set, in that order, as `["monitor-alone", "host-PEP-alone", "stack"]`. Duplicates and reordering are invalid on the index.
+
+Each arm is an outcome with `status`, `decision`, `residual_asr`, and `tip_pins`.
+
+| Arm | `status` | `decision` | `tip_pins` |
+| --- | --- | --- | --- |
+| `monitor-alone` | `stub`, `not_applicable`, or `not_mediated` | JSON `null` | `pep`, `supply_gate`, and `joint` may be null |
+| `host-PEP-alone` | `mapped`, `not_applicable`, or `not_mediated`. `stub` is not valid | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` otherwise | `mapped` requires `pep` (40-hex install SHA). `supply_gate` and `joint` may be null. Non-mapped pins may be null |
+| `stack` | `mapped`, `not_applicable`, or `not_mediated`. `stub` is not valid | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` otherwise | `mapped` requires `pep` and `supply_gate` (40-hex install SHAs). `joint` may stay null. Non-mapped pins may be null |
+
+`host-PEP-alone` `mapped` is the host-PEP-alone existence-proof. `stack` `mapped` is the stack existence-proof. Neither mapped outcome is valid on `monitor-alone`.
+
+### Arm `status`
+
+`decision` is JSON `null` when `status` is not `mapped`. Only `mapped` carries `DENY` or `ALLOW`.
+
+| `status` | Definition |
 | --- | --- |
-| Arm `status` `not_mediated` | Coverage / honesty outcome for a threat this gate does not mediate. `decision` is JSON `null`. Valid on `monitor-alone`, `host-PEP-alone`, and `stack` |
-| `benign_twin_of` | Optional. A `threat_id` (`acl-mc-…`) or JSON `null`. Points a benign row at its attack twin |
-| `attempted` | Optional integer ≥ 0, or JSON `null`. Attack trials for this row |
-| `reached_tool` | Optional integer ≥ 0, or JSON `null`. Attack trials that reached the tool |
-| `attempted_benign` | Optional integer ≥ 0, or JSON `null`. Benign trials for this row |
-| `blocked_benign` | Optional integer ≥ 0, or JSON `null`. Benign trials the gate blocked |
-| `table_id` | Optional string or JSON `null`. No table is recorded in this delta |
-| `plane` | Optional `host`, `supply`, `joint`, `complementarity`, or JSON `null`. Lab plane, not a `joint_story` step label (`pep` / `supply-gate`) |
+| `mapped` | Existence-proof outcome. `decision` is `DENY` or `ALLOW`. On `host-PEP-alone`, `tip_pins.pep` is the pep install SHA. On `stack`, `tip_pins.pep` and `tip_pins.supply_gate` are the sibling install SHAs, and `joint` may be null. Not valid on `monitor-alone` |
+| `stub` | Monitor-alone placeholder. `decision` is JSON `null`. Not valid on `host-PEP-alone` or `stack`. Pins may be null |
+| `not_applicable` | This arm is not the control for the threat. `decision` is JSON `null`. Valid on `monitor-alone`, `host-PEP-alone`, and `stack`. Pins may be null |
+| `not_mediated` | Coverage / honesty outcome for a threat this gate does not mediate. `decision` is JSON `null`. `residual_asr` is JSON `null`. Pins may be null. Valid on `monitor-alone`, `host-PEP-alone`, and `stack`. Not a measured rate |
 
-`existence_proof_only` is a boolean. The seed rows stay `true`. When it is `true`, every counter (`attempted`, `reached_tool`, `attempted_benign`, `blocked_benign`) must be JSON `null` if the key is present. Absent keys are still valid, so v0 rows validate unchanged. `no_asr_claim` stays `true`.
+### `residual_asr`, `no_asr_claim`, and the claim cite
+
+`residual_asr` is a nullable slot only. The schema accepts JSON `null` and no other value. Null means N/A. It is not a measured attack-success rate. Every arm outcome carries the slot. This delta does not add a numeric ASR.
+
+`no_asr_claim` is required and is the const `true`.
+
+The public/EOI claim cite stays the pep diligence tip. On the seed index, `claim_cite.lineage` is `1d0f380` and `claim_cite.lineage_sha` is `1d0f3809a4a16d4a6ac3524b287cf719f192e1f9` (`claim_cite.scope` is `public_eoi`; `claim_cite.package` is `agent-control-lab-pep`). This delta does not change that cite. It stays until a measured table exists and Cyber has passed it.
+
+### `benign_twin_of`
+
+Optional. Type string or JSON `null`. The string is a `threat_id`: the same pattern `^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$`. It is a pointer to the attack row this benign row twins. JSON `null` if this row is not a benign twin. This delta does not add benign-twin rows.
+
+### Counters
+
+Chosen counter names are the Evidence Corpus Plan appendix B set, one snake_case form, recorded once on the row (not repeated inside each arm): `attempted`, `reached_tool`, `attempted_benign`, `blocked_benign`.
+
+Each key is optional. The value is a trial count: JSON `null`, or an integer ≥ 0. A float, a boolean, a string, or an integer below 0 is invalid. A counter is not an attack-success rate.
+
+| Field | Definition |
+| --- | --- |
+| `attempted` | Attack trials for this row |
+| `reached_tool` | Attack trials that reached the tool |
+| `attempted_benign` | Benign trials for this row |
+| `blocked_benign` | Benign trials the gate blocked |
+
+`existence_proof_only` is a required boolean. The seed rows stay `true`. When `existence_proof_only` is `true`, every counter must be JSON `null` if the key is present. Absent keys are still valid, so a `measured-corpus-row-v0` row validates unchanged. A later row may set `existence_proof_only` to `false` and store counts. Those counts do not fill `residual_asr`, and they do not change `no_asr_claim` or the claim cite.
+
+### `table_id`
+
+Optional. Type string or JSON `null`. A string has minimum length 1; the empty string is invalid. It is a measured-table id. JSON `null` when no table is recorded. This delta stores no table.
+
+### `plane`
+
+Optional Lab plane for this row. The value is `host`, `supply`, `joint`, `complementarity`, or JSON `null`.
+
+| Value | Definition |
+| --- | --- |
+| `host` | Covers the pep/runtime gate |
+| `supply` | Covers the supply gate |
+| `joint` | The two-gate story |
+| `complementarity` | The monitor-versus-gate distinction |
+| JSON `null` | Unset |
+
+`plane` is not a `joint_story` step label. `pep` and `supply-gate` are not `plane` values.
 
 Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md).
