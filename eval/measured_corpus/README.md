@@ -2,7 +2,7 @@
 
 Contract for a **future** three-arm runner. Brand: Agent Control Lab. Apache-2.0.
 
-This directory is a row schema plus a 25-row seed map. It does **not** run fixtures and it is **not** a measured attack-success table. **No ASR.** `residual_asr` on every arm is JSON `null`.
+This directory is a row schema plus a 28-row seed map. It does **not** run fixtures and it is **not** a measured attack-success table. **No ASR.** `residual_asr` on every arm is JSON `null`.
 
 Arms are `monitor-alone` (stub or not applicable), `host-PEP-alone`, and `stack`.
 

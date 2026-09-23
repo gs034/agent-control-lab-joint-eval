@@ -601,10 +601,7 @@
         "reason_codes": [
           "approval_binding_mismatch"
         ],
-        "mapped_receipt_decision": "DENY",
-        "aliases": [
-          "approve-then-mutate"
-        ]
+        "mapped_receipt_decision": "DENY"
       },
       "fixtures": [
         {
@@ -658,7 +655,7 @@
       "no_asr_claim": true,
       "brand": "Agent Control Lab",
       "licence": "Apache-2.0",
-      "notes": "Same existence-proof as acl-mc-tm-approve-then-mutate-001. Two ids, one fixture pair, not two trials."
+      "notes": "Args-substitution existence-proof (tool_name plus canonical args bound at mint). Distinct from acl-mc-tm-approve-then-mutate-001, which covers state substitution via the pep v0.3.3 approval_state_substitution fixture."
     },
     {
       "threat_id": "acl-mc-pep-official-deny-001",

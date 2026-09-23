@@ -5,7 +5,9 @@
 A pin in pyproject.toml is a request; pip keeps an already-installed
 distribution whose version number has not changed. This test reads the
 installer's own record (PEP 610 ``direct_url.json``) and compares the
-commit it materialised with the documented pin.
+commit it materialised with the documented pin. Both dependencies are
+declared only as direct URLs, so an installed copy without that record
+is a pin that was not honoured, and fails rather than skips.
 """
 
 from __future__ import annotations
@@ -24,8 +26,7 @@ def _installed_commit(package: str) -> str:
     except metadata.PackageNotFoundError:
         pytest.skip(f"{package} is not installed")
     raw = dist.read_text("direct_url.json")
-    if raw is None:
-        pytest.skip(f"{package} was not installed from a direct URL")
+    assert raw is not None, f"{package} is installed but not from its pinned direct URL"
     record = json.loads(raw)
     vcs = record.get("vcs_info") or {}
     commit = vcs.get("commit_id")
