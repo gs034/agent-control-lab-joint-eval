@@ -4,7 +4,7 @@
 
 ## Purpose
 
-v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.**
+v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 v0 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.** One v1 row sits after those 28. It does not change their bodies.
 
 The official existence-proof remains `python -m joint_eval.demo` over `eval/joint_story/`. See [`docs/coverage-limits.md`](coverage-limits.md).
 
@@ -28,7 +28,7 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 
 ## Seed map
 
-[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 28 rows:
+[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 28 v0 rows:
 
 - 11 pep DENY rows (10 `eval/corpus/` classes plus the official `eval/` deny row), pinned at the pep install SHA
 - 10 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture, plus the three v0.4 manifest DENY fixtures), pinned at the supply-gate install SHA
@@ -61,3 +61,9 @@ Install pins in `joint_eval/pins.py` are how this harness installs packages. A r
 The row schema is a v1 delta on this contract. It still accepts every v0 seed row with `schema_version` `measured-corpus-row-v0` and with the v1 keys omitted. `measured-corpus-row-v1` is also accepted.
 
 Optional fields: arm status `not_mediated` (`decision` null; the gate does not mediate that threat), `benign_twin_of` (threat id or null), counters `attempted`, `reached_tool`, `attempted_benign`, `blocked_benign` (integer ≥ 0 or null), `table_id` (string or null), and `plane` (`host`, `supply`, `joint`, `complementarity`, or null). When `existence_proof_only` is true, every counter must be null. `residual_asr` stays null only. `no_asr_claim` stays true. The public/EOI claim cite stays pep diligence tip **`1d0f380`**. This note records no ASR and no filled counts. Field definitions are in [`eval/measured_corpus/schema/README.md`](../eval/measured_corpus/schema/README.md).
+
+## Mediation binding
+
+[`eval/measured_corpus/binding.md`](../eval/measured_corpus/binding.md) and [`eval/measured_corpus/binding.json`](../eval/measured_corpus/binding.json) (`table_id` `acl-mediation-binding-v1`) map each threat to the arm `status` and `decision` stored on the seed. Status words are `mapped`, `stub`, `not_applicable`, and `not_mediated`. Plane is `host`, `supply`, `joint`, or `complementarity`. The binding copies the 28 v0 arms. It does not relabel them and it does not store `residual_asr`.
+
+`acl-mc-representation-mismatch-001` is the v1 row. Class `representation_mismatch`, plane `complementarity`. A monitor or caller-side representation is not the structured envelope the host gate evaluates, and the pep and supply gates do not compare them, so every arm is `not_mediated` with a null decision. `benign_twin_of` is null. `existence_proof_only` is true and the four counters are null. `table_id` is `acl-mediation-binding-v1`. That id is this binding, not a measured attack-success table. The row adds no DENY reason. Args substitution and state-digest substitution stay on their mapped DENY rows.

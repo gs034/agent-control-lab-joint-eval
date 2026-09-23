@@ -258,7 +258,7 @@
     "attempted_benign": { "$ref": "#/$defs/count_or_null" },
     "blocked_benign": { "$ref": "#/$defs/count_or_null" },
     "table_id": {
-      "description": "Optional measured-table id. JSON null when no table is recorded. This delta stores no table.",
+      "description": "Optional id of a mediation-outcome binding, or JSON null when unset. acl-mediation-binding-v1 names that binding. It is not a measured attack-success table and does not change the 1d0f380 claim cite.",
       "type": ["string", "null"],
       "minLength": 1
     },

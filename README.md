@@ -71,7 +71,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md
 
 - Named deny *classes* only (bind class [arXiv:2609.21081](https://arxiv.org/abs/2609.21081); Plugin4Shell-class supply; monitor-bypass class [arXiv:2609.19587](https://arxiv.org/abs/2609.19587)).
 - Not a measured attack-success study. No ASR.
-- [`eval/measured_corpus/`](eval/measured_corpus/) is the v1 delta on the v0 seed rows for a future three-arm runner (`monitor-alone`, `host-PEP-alone`, `stack`), not a scoreboard. The schema accepts `measured-corpus-row-v0` and `measured-corpus-row-v1`. Monitor-alone is a stub. Public/EOI claim cite stays pep diligence tip `1d0f380`. See [`docs/measured-corpus-v0.md`](docs/measured-corpus-v0.md) (historical v0 seed doc; v1 field definitions are in [`eval/measured_corpus/schema/README.md`](eval/measured_corpus/schema/README.md)).
+- [`eval/measured_corpus/`](eval/measured_corpus/) is the v1 delta on the v0 seed rows for a future three-arm runner (`monitor-alone`, `host-PEP-alone`, `stack`), not a scoreboard. The schema accepts `measured-corpus-row-v0` and `measured-corpus-row-v1`. The 28 v0 rows keep monitor-alone as a stub. [`eval/measured_corpus/binding.md`](eval/measured_corpus/binding.md) maps each threat to arm status (`mapped`, `stub`, `not_applicable`, `not_mediated`). Public/EOI claim cite stays pep diligence tip `1d0f380`. See [`docs/measured-corpus-v0.md`](docs/measured-corpus-v0.md) (historical v0 seed doc; v1 field definitions are in [`eval/measured_corpus/schema/README.md`](eval/measured_corpus/schema/README.md)).
 - Not a production control plane, marketplace, or live git host.
 - Monitors remain useful observers; they are not allow authorities in this story.
 
