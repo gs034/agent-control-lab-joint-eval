@@ -957,11 +957,22 @@ def test_representation_mismatch_not_mediated_row_validates():
     assert seed["benign_twin_of"] is None
     assert seed["table_id"] == _BINDING_TABLE_ID
     assert seed["plane"] == "complementarity"
+    assert set(seed["arms"]) == set(_ARMS)
     for name in _COUNTERS:
         assert seed[name] is None
+    bound = _load(BINDING_PATH)["rows"][-1]
+    assert bound["threat_id"] == seed["threat_id"]
+    assert bound["plane"] == "complementarity"
+    assert bound["table_id"] == _BINDING_TABLE_ID
+    assert bound["benign_twin_of"] is None
+    for name in _COUNTERS:
+        assert bound[name] is None
+    assert set(bound["arms"]) == set(_ARMS)
     for arm_name in _ARMS:
         arm = seed["arms"][arm_name]
         assert arm["status"] == "not_mediated"
+        assert bound["arms"][arm_name]["status"] == "not_mediated"
+        assert bound["arms"][arm_name]["decision"] is None
         assert arm["decision"] is None
         assert arm["residual_asr"] is None
         assert arm["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}

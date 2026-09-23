@@ -618,6 +618,12 @@
       "family": "threat_model",
       "class_id": "representation_mismatch",
       "plane": "complementarity",
+      "table_id": "acl-mediation-binding-v1",
+      "benign_twin_of": null,
+      "attempted": null,
+      "reached_tool": null,
+      "attempted_benign": null,
+      "blocked_benign": null,
       "arms": {
         "monitor-alone": {
           "status": "not_mediated",
