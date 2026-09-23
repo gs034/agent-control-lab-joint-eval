@@ -4,7 +4,7 @@
 
 ## Purpose
 
-v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 v0 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.** After those 28 sit one v1 `representation_mismatch` row, 3 benign-twin rows, 22 B5 coverage honesty rows, and one B10 rug-pull two-envelope row. They do not change the v0 arm decisions.
+v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 v0 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.** After those 28 sit one v1 `representation_mismatch` row, 3 benign-twin rows, 22 B5 coverage honesty rows, one B10 rug-pull two-envelope row, and one B11 adaptive-attack monitor-injection row. They do not change the v0 arm decisions.
 
 The official existence-proof remains `python -m joint_eval.demo` over `eval/joint_story/`. See [`docs/coverage-limits.md`](coverage-limits.md).
 
@@ -20,7 +20,7 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 | Outcome `residual_asr` | JSON `null` only. The slot is reserved. It is not a filled claim |
 | Outcome `tip_pins` | Sibling install SHAs when that arm is mapped. `host-PEP-alone` mapped carries the pep install SHA. `stack` mapped carries the pep and supply-gate install SHAs (supply-related mapped rows included). `joint` stays `null` until a diligence note records the joint tip after this contract lands. `stub` and `not_applicable` may leave every pin null |
 
-`monitor-alone` is `stub` or `not_applicable`. Its `decision` is `null`. `stub` is not a valid status for `host-PEP-alone` or `stack`. This schema does not store a monitor score.
+`monitor-alone` is `stub` or `not_applicable`. Its `decision` is `null`. `stub` is not a valid status for `host-PEP-alone`. `stack` may be `stub` as a future-measure slot comparable to monitor-alone, with a null decision. This schema does not store a monitor score.
 
 `host-PEP-alone` is `mapped` for a pep existence-proof DENY, and for a pinned pep ALLOW fixture that is the benign twin of a host DENY where ALLOW is the intended decision. Supply pin and HEAD-verify threats leave that arm `not_applicable`: the PEP is not the supply control.
 
@@ -28,7 +28,7 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 
 ## Seed map
 
-[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 55 rows (28 v0 seeds, the `representation_mismatch` v1 row, 3 v1 benign twins, 22 B5 coverage honesty rows, and one B10 rug-pull two-envelope row):
+[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 56 rows (28 v0 seeds, the `representation_mismatch` v1 row, 3 v1 benign twins, 22 B5 coverage honesty rows, one B10 rug-pull two-envelope row, and one B11 adaptive-attack monitor-injection row):
 
 - 11 pep DENY rows (10 `eval/corpus/` classes plus the official `eval/` deny row), pinned at the pep install SHA
 - 3 benign twins of host DENY classes where a pinned pep ALLOW fixture already exists: `allow_catalog_bound` (capability spoof), `allow_approval_bound` (approval binding), `allow_approval_state_bound` (approve-then-mutate). Each row sets `benign_twin_of`. Host-PEP-alone is mapped `ALLOW`. `attempted_benign` and `blocked_benign` are JSON `null`
@@ -76,3 +76,5 @@ The three benign-twin rows use `schema_version` `measured-corpus-row-v1`. Their 
 [`eval/measured_corpus/coverage-b5.md`](../eval/measured_corpus/coverage-b5.md) publishes the sealed B5 not-mediated set in full (`table_id` `acl-coverage-b5-v1`). Twenty-two of those classes are v1 honesty rows appended after the benign twins: every arm is `not_mediated`, every decision is null, counters are null, and there is no fixture and no DENY reason. `representation_mismatch` stays the B4 row above. `ifc_dataflow_violations` is cite-only and has no corpus row. `mediated_frozen_policy` and `mediated_approval` name existing mapped rows; they are not new arm statuses and they add no DENY reason codes. Claim cite stays `1d0f380`. No ASR.
 
 [`eval/measured_corpus/rug-pull-b10.md`](../eval/measured_corpus/rug-pull-b10.md) records the B10 two-envelope existence proof (`acl-mc-supply-rug-pull-two-envelope-001`): pinned ALLOW, then DENY `head_mismatch`. Stack is mapped DENY. Counters are null. The unchanged-pin runtime twin stays `acl-mc-b5-rug-pull-unchanged-pin-runtime` (`not_mediated`, `table_id` `acl-coverage-b5-v1`). That classification is not rewritten. No new DENY reason code. No ASR.
+
+[`eval/measured_corpus/adaptive-attack-b11.md`](../eval/measured_corpus/adaptive-attack-b11.md) records the B11 existence slot (`acl-mc-adaptive-attack-monitor-injection-001`): injection aimed at the monitor arm, structured invoke envelope unchanged. `monitor-alone` and `stack` are `stub`. `host-PEP-alone` is `not_applicable`. Decisions are null. `table_id` is null. This is not `acl-mc-pep-monitor-coax-001`. No new DENY reason code. No ASR.
