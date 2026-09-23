@@ -44,8 +44,19 @@ Live row-schema v1 words only.
 | Threat-model class mapped to a pep corpus row | `host` | `stub` | `mapped` / `DENY` | `not_applicable` |
 | Benign twin of a host DENY | `host` | `stub` | `mapped` / `ALLOW` | `not_applicable` |
 | `representation_mismatch` | `complementarity` | `not_mediated` | `not_mediated` | `not_mediated` |
+| B5 not-mediated honesty row | primary plane from the sealed class (`host`, `supply`, `joint`, or `complementarity`) | `not_mediated` | `not_mediated` | `not_mediated` |
 
-Decisions on the 28 v0 rows stay the existence-proof values already in the seed. Host DENY notes add `Denial label: policy-intent.` This table does not add a DENY reason.
+Decisions on the 28 v0 rows stay the existence-proof values already in the seed. Host DENY notes add `Denial label: policy-intent.` This table does not add a DENY reason. B5 rows do not add one either.
+
+`mediated_frozen_policy` and `mediated_approval` are classification labels in the sealed B5 note. They are not arm `status` values. Classes in those buckets stay on the existing mapped rows. The crosswalk is in [`coverage-b5.md`](coverage-b5.md).
+
+## B5 not-mediated honesty rows
+
+`table_id` on each new honesty row is `acl-coverage-b5-v1`. That id is the sealed coverage classification. It is not a measured attack-success table. This binding file keeps `table_id` `acl-mediation-binding-v1` and copies each new row's arm `status` and `decision`.
+
+Every B5 honesty row is `measured-corpus-row-v1`, family `threat_model`, `fixtures` empty, `mapped_receipt_decision` null, `reason_codes` empty, `benign_twin_of` null, and the four counters null. `existence_proof_only` and `no_asr_claim` stay true. `residual_asr` stays null. `plane` is the primary plane token from the sealed class. A secondary plane, when the note names one, is recorded in `notes` only.
+
+`representation_mismatch` stays the B4 row: `plane` `complementarity`, `table_id` `acl-mediation-binding-v1`. It is not duplicated. `ifc_dataflow_violations` is cite-only in the sealed note (`suggested_table_id` null) and has no corpus row. The full not-mediated set, including those two classes, is published in [`coverage-b5.md`](coverage-b5.md). Claim cite stays `1d0f380`.
 
 ## `representation_mismatch` example
 

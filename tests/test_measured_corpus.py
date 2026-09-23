@@ -139,6 +139,38 @@ _BENIGN_TWINS = {
     "acl-mc-benign-allow-approval-bound-001": "acl-mc-pep-approval-binding-001",
     "acl-mc-benign-allow-approval-state-bound-001": "acl-mc-tm-approve-then-mutate-001",
 }
+_B5_TABLE_ID = "acl-coverage-b5-v1"
+_COVERAGE_DOC_PATH = CORPUS / "coverage-b5.md"
+# Sealed not-mediated classes with a new honesty row, in note order.
+# representation_mismatch stays the B4 row. ifc_dataflow_violations is cite-only.
+_B5_ROWS = (
+    ("acl-mc-b5-sleight-model-priors-evasion", "sleight_model_priors_evasion", "complementarity", None),
+    ("acl-mc-b5-sleight-user-instruction-ambiguity", "sleight_user_instruction_ambiguity", "complementarity", None),
+    ("acl-mc-b5-sleight-state-manipulation-monitor", "sleight_state_manipulation_monitor", "complementarity", "host"),
+    ("acl-mc-b5-f8-reads-as-harm", "f8_reads_as_harm", "complementarity", None),
+    ("acl-mc-b5-f8-prose-as-harm", "f8_prose_as_harm", "complementarity", None),
+    ("acl-mc-b5-f8-inscope-writes-as-harm", "f8_inscope_writes_as_harm", "complementarity", "host"),
+    ("acl-mc-b5-skill-semantic-skill-md", "skill_semantic_skill_md", "supply", "complementarity"),
+    ("acl-mc-b5-skill-malicious-payload-content", "skill_malicious_payload_content", "supply", None),
+    ("acl-mc-b5-mcp-tool-definition-poisoning", "mcp_tool_definition_poisoning", "supply", None),
+    ("acl-mc-b5-mcp-implementation-vuln-pinned", "mcp_implementation_vuln_pinned", "supply", None),
+    ("acl-mc-b5-mcp-runtime-response-poison", "mcp_runtime_response_poison", "supply", None),
+    ("acl-mc-b5-atlas-t0111-reputation-inflation", "atlas_t0111_reputation_inflation", "supply", "complementarity"),
+    ("acl-mc-b5-atlas-t0115-002-publish-poisoned", "atlas_t0115_002_publish_poisoned", "supply", None),
+    ("acl-mc-b5-rug-pull-unchanged-pin-runtime", "rug_pull_unchanged_pin_runtime", "supply", None),
+    ("acl-mc-b5-pin-moved-by-policy", "pin_moved_by_policy", "supply", None),
+    ("acl-mc-b5-distributed-blind-spot", "distributed_blind_spot", "host", "joint"),
+    ("acl-mc-b5-timing-strategic-blind-spot", "timing_strategic_blind_spot", "joint", "host"),
+    ("acl-mc-b5-f33-below-envelope-effects", "f33_below_envelope_effects", "host", None),
+    ("acl-mc-b5-vendor-f20-phish-inpolicy-command", "vendor_f20_phish_inpolicy_command", "host", "complementarity"),
+    ("acl-mc-b5-vendor-f20-egress-cred-bypass", "vendor_f20_egress_cred_bypass", "host", None),
+    ("acl-mc-b5-caller-skips-gated-invoke", "caller_skips_gated_invoke", "host", "supply"),
+    ("acl-mc-b5-process-equivalent-bypass", "process_equivalent_bypass", "joint", "complementarity"),
+)
+_B5_THREAT_IDS = tuple(item[0] for item in _B5_ROWS)
+_B5_CLASS_IDS = frozenset(item[1] for item in _B5_ROWS)
+_B5_CITE_ONLY_CLASS = "ifc_dataflow_violations"
+_INDEX_ROW_MAX = 54
 _DENY_REASON_CODES = frozenset(
     {
         "TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY",
@@ -470,7 +502,7 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     assert index_schema["properties"]["runner_implemented"]["const"] is False
     assert index_schema["properties"]["measured_attack_success_claimed"]["const"] is False
     assert index_schema["properties"]["rows"]["minItems"] == 20
-    assert index_schema["properties"]["rows"]["maxItems"] == 50
+    assert index_schema["properties"]["rows"]["maxItems"] == _INDEX_ROW_MAX
     assert index_schema["properties"]["rows"]["items"] == {"$ref": "row.schema.json"}
     assert index_schema["properties"]["arms"]["const"] == list(_ARMS)
     cite = index_schema["properties"]["claim_cite"]["properties"]
@@ -487,13 +519,15 @@ def test_seed_index_and_rows_match_schema():
     assert index["claim_cite"]["lineage"] == "1d0f380"
     assert "Cyber PASS" in index["claim_cite"]["note"]
     rows = index["rows"]
-    assert 20 <= len(rows) <= 50
+    assert 20 <= len(rows) <= _INDEX_ROW_MAX
     ids = [row["threat_id"] for row in rows]
     assert len(ids) == len(set(ids))
     v0_count = len(_V0_THREAT_IDS)
     assert ids[:v0_count] == list(_V0_THREAT_IDS)
     assert ids[v0_count] == _REPRESENTATION_MISMATCH_ID
-    assert ids[v0_count + 1 :] == list(_BENIGN_TWINS)
+    twin_end = v0_count + 1 + len(_BENIGN_TWINS)
+    assert ids[v0_count + 1 : twin_end] == list(_BENIGN_TWINS)
+    assert ids[twin_end:] == list(_B5_THREAT_IDS)
     for row in rows[:v0_count]:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
         assert row["schema_version"] == "measured-corpus-row-v0"
@@ -681,9 +715,9 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     assert len(by_family["supply_pin_head_verify"]) == 10
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
     threat_rows = {row["taxonomy"]["class_id"]: row for row in by_family["threat_model"]}
-    assert set(threat_rows) == _TM_CLASSES
+    assert set(threat_rows) == _TM_CLASSES | _B5_CLASS_IDS
     for class_id, row in threat_rows.items():
-        if class_id == "representation_mismatch":
+        if class_id == "representation_mismatch" or class_id in _B5_CLASS_IDS:
             assert row["taxonomy"]["mapped_receipt_decision"] is None
             assert row["taxonomy"]["reason_codes"] == []
         else:
@@ -727,7 +761,7 @@ def test_arm_outcomes_stay_unmeasured():
             assert monitor["status"] in {"stub", "not_applicable"}
             for arm in row["arms"].values():
                 assert arm["status"] != "not_mediated"
-        elif row["threat_id"] == _REPRESENTATION_MISMATCH_ID:
+        elif row["threat_id"] in {_REPRESENTATION_MISMATCH_ID, *_B5_THREAT_IDS}:
             assert monitor["status"] == "not_mediated"
         else:
             assert row["threat_id"] in _BENIGN_TWINS
@@ -921,6 +955,9 @@ def test_v1_benign_twin_of_round_trips():
 
 
 def _plane_for(row: dict[str, Any]) -> str:
+    explicit = row.get("plane")
+    if explicit in _PLANE_VOCABULARY:
+        return explicit
     if any(fixture["role"] == "joint_story" for fixture in row["fixtures"]):
         return "joint"
     family = row["taxonomy"]["family"]
@@ -1114,3 +1151,84 @@ def test_host_benign_twins_stay_existence_proofs():
         assert target["arms"]["host-PEP-alone"]["decision"] == "DENY"
         assert row["threat_id"] in target["notes"]
     assert len(set(targets)) == 3
+
+
+def test_b5_not_mediated_rows_match_sealed_classification():
+    index = _load(INDEX_PATH)
+    binding = _load(BINDING_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+    assert binding["table_id"] == _BINDING_TABLE_ID
+    assert binding["claim_cite_lineage"] == "1d0f380"
+    rows = index["rows"]
+    assert len(rows) == _INDEX_ROW_MAX
+    by_id = {row["threat_id"]: row for row in rows}
+    bound_by_id = {row["threat_id"]: row for row in binding["rows"]}
+    assert _B5_CITE_ONLY_CLASS not in {row["taxonomy"]["class_id"] for row in rows}
+    assert "representation_mismatch" not in _B5_CLASS_IDS
+
+    mismatch = by_id[_REPRESENTATION_MISMATCH_ID]
+    assert mismatch["table_id"] == _BINDING_TABLE_ID
+    assert mismatch["plane"] == "complementarity"
+    assert mismatch["taxonomy"]["class_id"] == "representation_mismatch"
+    for arm in mismatch["arms"].values():
+        assert arm["status"] == "not_mediated"
+        assert arm["decision"] is None
+
+    for threat_id, class_id, plane, secondary in _B5_ROWS:
+        row = by_id[threat_id]
+        _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+        assert row["schema_version"] == "measured-corpus-row-v1"
+        assert row["taxonomy"]["family"] == "threat_model"
+        assert row["taxonomy"]["class_id"] == class_id
+        assert row["taxonomy"]["reason_codes"] == []
+        assert row["taxonomy"]["mapped_receipt_decision"] is None
+        assert row["fixtures"] == []
+        assert row["existence_proof_only"] is True
+        assert row["no_asr_claim"] is True
+        assert row["benign_twin_of"] is None
+        assert row["table_id"] == _B5_TABLE_ID
+        assert row["plane"] == plane
+        assert row["plane"] in _PLANE_VOCABULARY
+        for name in _COUNTERS:
+            assert row[name] is None
+        if secondary is None:
+            assert "secondary plane" not in row["notes"]
+        else:
+            assert f"secondary plane {secondary}" in row["notes"]
+        assert "1d0f380" in row["notes"]
+        assert "No DENY reason" in row["notes"]
+        for arm_name in _ARMS:
+            arm = row["arms"][arm_name]
+            assert arm["status"] == "not_mediated"
+            assert arm["decision"] is None
+            assert arm["residual_asr"] is None
+            assert arm["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
+        bound = bound_by_id[threat_id]
+        assert bound["class_id"] == class_id
+        assert bound["plane"] == plane
+        assert bound["table_id"] == _B5_TABLE_ID
+        assert bound["benign_twin_of"] is None
+        for name in _COUNTERS:
+            assert bound[name] is None
+        for arm_name in _ARMS:
+            assert bound["arms"][arm_name] == {"status": "not_mediated", "decision": None}
+
+    published = _COVERAGE_DOC_PATH.read_text(encoding="utf-8")
+    for class_id in (*_B5_CLASS_IDS, "representation_mismatch", _B5_CITE_ONLY_CLASS):
+        assert f"`{class_id}`" in published
+    assert _B5_TABLE_ID in published
+    assert "1d0f380" in published
+    assert "mediated_frozen_policy" in published
+    assert "mediated_approval" in published
+    assert published.count("`mediated_frozen_policy`") >= 19
+    assert "No new DENY" in published or "no new DENY" in published
+    deny_codes = {
+        code
+        for row in rows
+        if row["taxonomy"]["mapped_receipt_decision"] == "DENY"
+        for code in row["taxonomy"]["reason_codes"]
+    }
+    assert deny_codes == _DENY_REASON_CODES
+    assert _B5_TABLE_ID not in deny_codes

@@ -7,7 +7,7 @@ JSON Schema (draft 2020-12):
 | File | What it checks |
 | --- | --- |
 | [`row.schema.json`](row.schema.json) | One threat row. Accepts `measured-corpus-row-v0` and `measured-corpus-row-v1` |
-| [`index.schema.json`](index.schema.json) | Seed envelope (`rows[]` length 20–50; each item `$ref`s the row schema). `arms` is exactly `["monitor-alone", "host-PEP-alone", "stack"]` |
+| [`index.schema.json`](index.schema.json) | Seed envelope (`rows[]` length 20–54; each item `$ref`s the row schema). `arms` is exactly `["monitor-alone", "host-PEP-alone", "stack"]` |
 
 Neither schema sets an absolute `$id`. Load the checked-out `index.schema.json` so a stock Draft 2020-12 resolver uses that file's retrieval URI as the base; `rows.items.$ref` (`row.schema.json`) then resolves to the adjacent file in this directory. Do not add an `https://github.com/...` `$id`: that URL is an HTML page, and the relative reference would resolve against it instead of this bundle. A relative `$id` is not a substitute; resolvers that take `$id` as the base without joining it to the retrieval URI look for `row.schema.json` in the process working directory.
 
@@ -97,6 +97,8 @@ Each key is optional. The value is a trial count: JSON `null`, or an integer ≥
 
 Optional. Type string or JSON `null`. A string has minimum length 1; the empty string is invalid. `acl-mediation-binding-v1` names the mediation-outcome binding in [`../binding.json`](../binding.json). It is not a measured attack-success table. JSON `null` when unset. This id does not change the `1d0f380` claim cite.
 
+`acl-coverage-b5-v1` names the sealed B5 cross-plane coverage classification ([`../coverage-b5.md`](../coverage-b5.md)). A row with that id and arm status `not_mediated` is a coverage honesty outcome: `decision` is JSON `null`, counters stay null while `existence_proof_only` is true, and `residual_asr` stays null. It is not a measured attack-success table and it does not change the `1d0f380` claim cite. The classification note leaves `ifc_dataflow_violations` cite-only (`suggested_table_id` null); that class has no corpus row.
+
 ### `plane`
 
 Optional Lab plane for this row. The value is `host`, `supply`, `joint`, `complementarity`, or JSON `null`.
@@ -109,8 +111,8 @@ Optional Lab plane for this row. The value is `host`, `supply`, `joint`, `comple
 | `complementarity` | The monitor-versus-gate distinction |
 | JSON `null` | Unset |
 
-`plane` is not a `joint_story` step label. `pep` and `supply-gate` are not `plane` values.
+`plane` is not a `joint_story` step label. `pep` and `supply-gate` are not `plane` values. A row stores one primary plane. A sealed B5 class may also name a secondary plane in `notes`; that secondary tag is not a second `plane` value.
 
 Fixture `path` values point at `eval/…` in the named repo. This tree does not vendor those directories. See [`docs/measured-corpus-v0.md`](../../../docs/measured-corpus-v0.md). That filename is historical (v0 seed doc). The v1 field definitions live in this schema README.
 
-The mediation binding ([`../binding.md`](../binding.md), [`../binding.json`](../binding.json)) maps each threat to an arm `status` and `decision` using the vocabulary above. `representation_mismatch` is `not_mediated` on every arm.
+The mediation binding ([`../binding.md`](../binding.md), [`../binding.json`](../binding.json)) maps each threat to an arm `status` and `decision` using the vocabulary above. `representation_mismatch` is `not_mediated` on every arm. B5 honesty rows for the sealed not-mediated set (except the cite-only `ifc_dataflow_violations` class, and except `representation_mismatch`, which stays the B4 row) are also `not_mediated` on every arm, with `table_id` `acl-coverage-b5-v1`. `mediated_frozen_policy` and `mediated_approval` are classification labels in that note. They are not arm `status` values and they do not add DENY reason codes.
