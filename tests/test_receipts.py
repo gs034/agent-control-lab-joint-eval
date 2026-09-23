@@ -45,6 +45,29 @@ def test_pep_approval_binding_mismatch():
     assert step.receipt["negative_controls_observed"]["tool_invoke_executed"] is False
 
 
+def test_supply_rug_pull_two_envelope():
+    result = run_joint_story(root=ROOT)
+    step = result.steps[4]
+    assert step.step_id == "acl-joint-supply-rug-pull-two-envelope-001"
+    assert step.decision == "DENY"
+    assert step.expected_decision == "DENY"
+    assert step.invoked is False
+    assert step.ok
+    assert len(step.envelopes) == 2
+    first, second = step.envelopes
+    assert first["decision"] == "ALLOW"
+    assert first["receipt"]["reasons"] == []
+    assert first["receipt"]["verify_performed"] is True
+    assert second["decision"] == "DENY"
+    assert second["allowed"] is False
+    assert second["receipt"]["reasons"] == ["head_mismatch"]
+    assert second["receipt"]["verify_performed"] is True
+    assert first["receipt"]["expected_sha"] == second["receipt"]["expected_sha"]
+    assert first["receipt"]["observed_head"] == first["receipt"]["expected_sha"]
+    assert second["receipt"]["observed_head"] != second["receipt"]["expected_sha"]
+    assert step.receipt == second["receipt"]
+
+
 def test_frozen_expected_files_match_live():
     result = run_joint_story(root=ROOT)
     base = story_dir()
@@ -53,10 +76,23 @@ def test_frozen_expected_files_match_live():
         "acl-joint-supply-pin-without-verify-001": "supply_pin_without_verify",
         "acl-joint-pep-monitor-bypass-prose-001": "pep_monitor_bypass_prose",
         "acl-joint-pep-approval-binding-001": "pep_approval_binding",
+        "acl-joint-supply-rug-pull-two-envelope-001": "supply_rug_pull_two_envelope",
     }
     pep_skip = frozenset({"timestamp"})
     for step in result.steps:
-        expected = load_object(base / mapping[step.step_id] / "expected_receipt.json")
+        folder = base / mapping[step.step_id]
+        sequence_path = folder / "sequence.json"
+        if sequence_path.is_file():
+            sequence = load_object(sequence_path)
+            assert sequence["deny_reason"] == "head_mismatch"
+            assert sequence["unchanged_pin_runtime"]["status"] == "not_mediated"
+            assert len(step.envelopes) == len(sequence["envelopes"])
+            for spec, envelope in zip(sequence["envelopes"], step.envelopes):
+                expected = load_object(folder / spec["dir"] / "expected_receipt.json")
+                mismatches = compare_receipt(envelope["receipt"], expected)
+                assert not mismatches, mismatches
+            continue
+        expected = load_object(folder / "expected_receipt.json")
         skip = pep_skip if step.plane == "pep" else frozenset()
         mismatches = compare_receipt(step.receipt, expected, skip=skip)
         assert not mismatches, mismatches

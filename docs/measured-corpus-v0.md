@@ -4,7 +4,7 @@
 
 ## Purpose
 
-v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 v0 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.** After those 28 sit one v1 `representation_mismatch` row, 3 benign-twin rows, and 22 B5 coverage honesty rows. They do not change the v0 arm decisions.
+v0 is a **contract** for a future three-arm runner: a frozen row schema and a seed map of 28 v0 threats. It does not run those rows. It is not a measured attack-success table. **No ASR.** After those 28 sit one v1 `representation_mismatch` row, 3 benign-twin rows, 22 B5 coverage honesty rows, and one B10 rug-pull two-envelope row. They do not change the v0 arm decisions.
 
 The official existence-proof remains `python -m joint_eval.demo` over `eval/joint_story/`. See [`docs/coverage-limits.md`](coverage-limits.md).
 
@@ -28,11 +28,11 @@ The official existence-proof remains `python -m joint_eval.demo` over `eval/join
 
 ## Seed map
 
-[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 54 rows (28 v0 seeds, the `representation_mismatch` v1 row, 3 v1 benign twins, and 22 B5 coverage honesty rows):
+[`eval/measured_corpus/index.json`](../eval/measured_corpus/index.json) has 55 rows (28 v0 seeds, the `representation_mismatch` v1 row, 3 v1 benign twins, 22 B5 coverage honesty rows, and one B10 rug-pull two-envelope row):
 
 - 11 pep DENY rows (10 `eval/corpus/` classes plus the official `eval/` deny row), pinned at the pep install SHA
 - 3 benign twins of host DENY classes where a pinned pep ALLOW fixture already exists: `allow_catalog_bound` (capability spoof), `allow_approval_bound` (approval binding), `allow_approval_state_bound` (approve-then-mutate). Each row sets `benign_twin_of`. Host-PEP-alone is mapped `ALLOW`. `attempted_benign` and `blocked_benign` are JSON `null`
-- 10 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture, plus the three v0.4 manifest DENY fixtures), pinned at the supply-gate install SHA
+- 11 supply pin and post-checkout HEAD-verify rows (6 DENY fixtures and the pin-and-verify ALLOW fixture, plus the three v0.4 manifest DENY fixtures, plus the B10 two-envelope `head_mismatch` DENY), pinned at the supply-gate install SHA
 - 4 Noul taxonomy slots: `override`, `no_rules_persona`, `embedded_instruction`, `tool_abuse`. No fixture and no arm decision. They are class labels, not scores
 - 3 threat-model classes, each mapped to its own pep corpus row: `approve-then-mutate` (approval_state_mismatch, pep v0.3.3), `multi-session-plant` (approval_invalid), `deferred-tool` (approval_expired)
 
@@ -74,3 +74,5 @@ The three benign-twin rows use `schema_version` `measured-corpus-row-v1`. Their 
 ## B5 coverage annotations
 
 [`eval/measured_corpus/coverage-b5.md`](../eval/measured_corpus/coverage-b5.md) publishes the sealed B5 not-mediated set in full (`table_id` `acl-coverage-b5-v1`). Twenty-two of those classes are v1 honesty rows appended after the benign twins: every arm is `not_mediated`, every decision is null, counters are null, and there is no fixture and no DENY reason. `representation_mismatch` stays the B4 row above. `ifc_dataflow_violations` is cite-only and has no corpus row. `mediated_frozen_policy` and `mediated_approval` name existing mapped rows; they are not new arm statuses and they add no DENY reason codes. Claim cite stays `1d0f380`. No ASR.
+
+[`eval/measured_corpus/rug-pull-b10.md`](../eval/measured_corpus/rug-pull-b10.md) records the B10 two-envelope existence proof (`acl-mc-supply-rug-pull-two-envelope-001`): pinned ALLOW, then DENY `head_mismatch`. Stack is mapped DENY. Counters are null. The unchanged-pin runtime twin stays `acl-mc-b5-rug-pull-unchanged-pin-runtime` (`not_mediated`, `table_id` `acl-coverage-b5-v1`). That classification is not rewritten. No new DENY reason code. No ASR.

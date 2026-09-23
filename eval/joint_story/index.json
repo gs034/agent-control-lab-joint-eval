@@ -36,6 +36,14 @@
       "expected_decision": "DENY",
       "dir": "pep_approval_binding",
       "notes": "Single-use TTL approval frozen to tool_name + canonical args; substitution DENY."
+    },
+    {
+      "id": "acl-joint-supply-rug-pull-two-envelope-001",
+      "plane": "supply-gate",
+      "threat_class": "rug-pull two-envelope (pinned ALLOW, later head_mismatch)",
+      "expected_decision": "DENY",
+      "dir": "supply_rug_pull_two_envelope",
+      "notes": "Existence proof only. Envelope 1 ALLOW when the pin matches observed HEAD. Envelope 2 DENY head_mismatch when the same pin is later observed at a different HEAD. No ASR. Unchanged-pin runtime behaviour is not_mediated."
     }
   ]
 }

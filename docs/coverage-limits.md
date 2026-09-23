@@ -9,6 +9,7 @@ This harness is an **existence-proof**. Brand: Agent Control Lab. Apache-2.0.
   - pin-without-verify supply (omitted observed HEAD)
   - monitor-bypass / prose-as-policy PEP
   - approval-binding mismatch PEP (bind class)
+  - rug-pull two-envelope supply (pinned ALLOW, then `head_mismatch` DENY). Existence proof only. The unchanged-pin runtime case is `not_mediated`, not a DENY.
 - Frozen receipts for those rows (PEP `timestamp` compared semantically, not as identity).
 - Pinned sibling SHAs via git install (no vendored `pep/` or `supply_gate/` trees).
 - Fail-closed demo and tests.
