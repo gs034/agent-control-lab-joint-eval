@@ -39,7 +39,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/prose_as_policy/",
           "source_id": "acl-pep-eval-prose-as-policy-001"
         }
@@ -60,7 +60,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -100,7 +100,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/capability_spoof/",
           "source_id": "acl-pep-eval-capability-spoof-001"
         }
@@ -121,7 +121,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -161,7 +161,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/monitor_coax/",
           "source_id": "acl-pep-eval-monitor-coax-001"
         },
@@ -189,7 +189,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -199,7 +199,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": "938769656e7cb311d1953dee9df22b79275e6c09",
             "joint": null
           }
@@ -229,7 +229,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/missing_policy/",
           "source_id": "acl-pep-eval-missing-policy-001"
         }
@@ -250,7 +250,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -293,7 +293,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/kill/",
           "source_id": "acl-pep-eval-kill-001"
         }
@@ -314,7 +314,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -354,7 +354,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/late_effect_fence/",
           "source_id": "acl-pep-eval-late-effect-fence-001"
         }
@@ -375,7 +375,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -418,7 +418,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/suspend/",
           "source_id": "acl-pep-eval-suspend-001"
         }
@@ -439,7 +439,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -482,7 +482,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/approval_replay/",
           "source_id": "acl-pep-eval-approval-replay-001"
         }
@@ -503,7 +503,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -546,7 +546,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/approval_ttl/",
           "source_id": "acl-pep-eval-approval-ttl-001"
         }
@@ -567,7 +567,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -607,7 +607,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/approval_binding_mismatch/",
           "source_id": "acl-pep-eval-approval-binding-mismatch-001"
         },
@@ -635,7 +635,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -645,7 +645,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": "938769656e7cb311d1953dee9df22b79275e6c09",
             "joint": null
           }
@@ -675,14 +675,14 @@
         {
           "role": "pep_official",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/structured_envelope.example.json",
           "source_id": "acl-pep-eval-2609-19587-class-001"
         },
         {
           "role": "pep_official",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/expected_deny_receipt.example.json",
           "source_id": "acl-pep-eval-2609-19587-class-001"
         }
@@ -703,7 +703,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -782,7 +782,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": "938769656e7cb311d1953dee9df22b79275e6c09",
             "joint": null
           }
@@ -853,7 +853,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": "938769656e7cb311d1953dee9df22b79275e6c09",
             "joint": null
           }
@@ -1394,7 +1394,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/approval_state_substitution/",
           "source_id": "acl-pep-eval-approval-state-substitution-001"
         }
@@ -1415,7 +1415,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -1458,7 +1458,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/multi_session_plant/",
           "source_id": "acl-pep-eval-multi-session-plant-001"
         }
@@ -1479,7 +1479,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
@@ -1522,7 +1522,7 @@
         {
           "role": "pep_corpus",
           "repo": "https://github.com/gs034/agent-control-lab-pep",
-          "git_sha": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+          "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
           "path": "eval/corpus/deferred_tool/",
           "source_id": "acl-pep-eval-deferred-tool-001"
         }
@@ -1543,7 +1543,7 @@
           "decision": "DENY",
           "residual_asr": null,
           "tip_pins": {
-            "pep": "2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a",
+            "pep": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
             "supply_gate": null,
             "joint": null
           }
