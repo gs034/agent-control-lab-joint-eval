@@ -30,9 +30,12 @@ Requires Python 3.11+. Network is needed once to install the pinned sibling pack
 ```bash
 python -m pip install -e ".[dev]"
 python -m joint_eval.demo
+python -m joint_eval.control_arena_export --out /tmp/acl-control-arena-export
 pytest
 python3 scripts/lab_brand_wall.py
 ```
+
+`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md).
 
 `python -m joint_eval.demo` prints the joint story document (pins, DENY receipts, coverage limits) and exits 0 only when every step DENY’d without invoke.
 
@@ -79,7 +82,8 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md
 
 | Path | Role |
 | --- | --- |
-| `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo` |
+| `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo`, ControlArena directory export |
+| `docs/control-arena-export.md` | Directory export from fixtures and receipts. Not a setting. No ASR |
 | `eval/joint_story/` | Joint fixtures + frozen expected receipts |
 | `eval/measured_corpus/` | Row schema (v1 delta; v0 seed rows still valid) + seed map. Not a runner |
 | `docs/measured-corpus-v0.md` | Historical v0 seed doc. v1 field definitions are in `eval/measured_corpus/schema/README.md` |

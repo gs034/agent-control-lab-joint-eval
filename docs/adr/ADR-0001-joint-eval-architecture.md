@@ -44,3 +44,4 @@ Pinned SHAs at acceptance:
 - Not a monorepo, subtree vendor, or git submodule of the siblings.
 - Not production SaaS, marketplace, or live git-host integration.
 - Not a replacement for monitors.
+- Not a ControlArena or Inspect setting. A directory export may be written from fixtures and receipts; that writer is not an eval loop.
