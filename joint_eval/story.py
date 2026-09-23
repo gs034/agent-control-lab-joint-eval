@@ -8,6 +8,9 @@ Steps (this tree's fixtures; sibling packages via pinned git installs):
 2. Pin-without-verify supply DENY (observed HEAD omitted)
 3. Monitor-bypass / prose-as-policy PEP DENY
 4. Approval-binding mismatch PEP DENY (bind class)
+5. Rug-pull two-envelope supply sequence (pinned ALLOW, then
+   head_mismatch DENY). The step outcome is DENY. Unchanged-pin
+   runtime behaviour is not mediated and is not a step.
 
 No model call on this path. No marketplace. Complementary to monitors —
 not a replacement. Existence-proof only; this tree does not measure
@@ -59,6 +62,7 @@ class StepResult:
     invoked: bool
     ok: bool
     notes: str
+    envelopes: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +118,10 @@ def run_joint_story(*, root: Path | None = None) -> JointStoryResult:
         "coverage_limits": (
             "Existence-proof of named deny classes only. Not a measured "
             "attack-success study. Not a replacement for monitors. Does not "
-            "vendor sibling source trees; invokes pinned public packages."
+            "vendor sibling source trees; invokes pinned public packages. "
+            "The rug-pull step is two envelopes in one fixture: pinned ALLOW, "
+            "then DENY head_mismatch. Unchanged-pin runtime behaviour is not "
+            "mediated and is not a DENY."
         ),
         "steps": [_step_public(step) for step in steps],
         "all_denied": ok,
@@ -162,6 +169,18 @@ def _run_row(
     expected_decision = str(raw["expected_decision"])
     rel = str(raw["dir"])
     folder = base / rel
+    if (folder / "sequence.json").is_file():
+        return _run_supply_sequence(
+            step_id=step_id,
+            plane=plane,
+            threat_class=threat_class,
+            expected_decision=expected_decision,
+            folder=folder,
+            notes=str(raw.get("notes") or ""),
+            supply_evaluate=supply_evaluate,
+            supply_verdict=supply_verdict,
+            supply_origins=supply_origins,
+        )
     envelope = load_object(folder / ENVELOPE_NAME)
     expected = load_object(folder / EXPECTED_NAME)
     notes = str(raw.get("notes") or "")
@@ -272,8 +291,143 @@ def _load_observed_head(path: Path) -> str | None:
     return observed
 
 
+def _run_supply_sequence(
+    *,
+    step_id: str,
+    plane: str,
+    threat_class: str,
+    expected_decision: str,
+    folder: Path,
+    notes: str,
+    supply_evaluate: Callable[..., Any],
+    supply_verdict: Any,
+    supply_origins: frozenset[str],
+) -> StepResult:
+    """Pinned ALLOW, then a later update DENY. Step outcome is the DENY.
+
+    The first envelope is allowed when the pin matches observed HEAD. That
+    allowance is not an invoke on the DENY path. The second envelope must
+    DENY with the existing reason head_mismatch only. An unchanged pin whose
+    runtime behaviour changed is not an envelope here.
+    """
+    if plane != "supply-gate":
+        raise JointEvalError(f"{step_id}: two-envelope sequence is supply-gate only")
+    if expected_decision != "DENY":
+        raise JointEvalError(f"{step_id}: sequence outcome must be DENY")
+    spec = load_object(folder / "sequence.json")
+    if spec.get("existence_proof_only") is not True:
+        raise JointEvalError(f"{step_id}: sequence must be existence-proof only")
+    if spec.get("measured_attack_success_claimed") is not False:
+        raise JointEvalError(f"{step_id}: sequence must not claim a measured rate")
+    if spec.get("deny_reason") != "head_mismatch":
+        raise JointEvalError(f"{step_id}: second envelope must use head_mismatch")
+    unchanged = spec.get("unchanged_pin_runtime")
+    if not isinstance(unchanged, Mapping) or unchanged.get("status") != "not_mediated":
+        raise JointEvalError(f"{step_id}: unchanged-pin runtime must be not_mediated")
+    envelopes_spec = spec.get("envelopes")
+    if not isinstance(envelopes_spec, list) or len(envelopes_spec) != 2:
+        raise JointEvalError(f"{step_id}: sequence envelopes must be a two-item array")
+
+    evaluated: list[dict[str, Any]] = []
+    for index, item in enumerate(envelopes_spec):
+        if not isinstance(item, Mapping):
+            raise JointEvalError(f"{step_id}: envelope spec must be an object")
+        env_dir = str(item.get("dir") or "")
+        expected_env = "ALLOW" if index == 0 else "DENY"
+        if env_dir != f"envelope_{index + 1}":
+            raise JointEvalError(f"{step_id}: envelope dir must be envelope_{index + 1}")
+        if str(item.get("expected_decision")) != expected_env:
+            raise JointEvalError(
+                f"{step_id}: envelope {index + 1} expected_decision must be {expected_env}"
+            )
+        sub = folder / env_dir
+        envelope = load_object(sub / ENVELOPE_NAME)
+        expected = load_object(sub / EXPECTED_NAME)
+        observed = _load_observed_head(sub / OBSERVED_HEAD_NAME)
+        prose_path = sub / PROSE_NAME
+        prose = prose_path.read_text(encoding="utf-8") if prose_path.is_file() else None
+        decision_obj = supply_evaluate(
+            envelope,
+            observed,
+            allowed_origins=supply_origins,
+            kill_active=False,
+            untrusted_prose=prose,
+        )
+        live = dict(decision_obj.receipt)
+        decision = str(
+            decision_obj.verdict.value
+            if hasattr(decision_obj.verdict, "value")
+            else decision_obj.verdict
+        )
+        allowed = bool(decision_obj.allowed) or decision_obj.verdict is supply_verdict.ALLOW
+        mismatches = compare_receipt(live, expected)
+        evaluated.append(
+            {
+                "id": str(item.get("id") or env_dir),
+                "decision": decision,
+                "expected_decision": expected_env,
+                "allowed": allowed,
+                "mismatches": mismatches,
+                "receipt": live,
+            }
+        )
+
+    first, second = evaluated
+    pin = first["receipt"].get("expected_sha")
+    reasons_ok = first["receipt"].get("reasons") == [] and second["receipt"].get("reasons") == [
+        "head_mismatch"
+    ]
+    pin_stable = (
+        isinstance(pin, str)
+        and pin == second["receipt"].get("expected_sha")
+        and first["receipt"].get("observed_head") == pin
+        and second["receipt"].get("observed_head") not in {None, pin}
+    )
+    ok = (
+        first["decision"] == "ALLOW"
+        and not first["mismatches"]
+        and second["decision"] == "DENY"
+        and not second["allowed"]
+        and not second["mismatches"]
+        and second["receipt"].get("decision") == "DENY"
+        and reasons_ok
+        and pin_stable
+    )
+    if first["mismatches"] or second["mismatches"]:
+        detail = "; ".join([*first["mismatches"], *second["mismatches"]])
+        notes = (notes + " " if notes else "") + "receipt mismatch: " + detail
+    if second["allowed"]:
+        notes = (notes + " " if notes else "") + "callable entered on DENY path"
+    if not reasons_ok:
+        notes = (notes + " " if notes else "") + "second envelope must DENY with head_mismatch only"
+    if not pin_stable:
+        notes = (notes + " " if notes else "") + "pin must stay put while observed HEAD changes"
+    public = tuple(
+        {
+            "id": item["id"],
+            "decision": item["decision"],
+            "expected_decision": item["expected_decision"],
+            "allowed": item["allowed"],
+            "receipt": item["receipt"],
+        }
+        for item in evaluated
+    )
+    return StepResult(
+        step_id=step_id,
+        plane=plane,
+        threat_class=threat_class,
+        decision="DENY",
+        expected_decision="DENY",
+        receipt=second["receipt"],
+        invoked=bool(second["allowed"]),
+        ok=ok,
+        notes=notes,
+        envelopes=public,
+    )
+
+
 def _step_public(step: StepResult) -> dict[str, Any]:
-    return {
+    document = {
         "id": step.step_id,
         "plane": step.plane,
         "threat_class": step.threat_class,
@@ -284,6 +438,10 @@ def _step_public(step: StepResult) -> dict[str, Any]:
         "notes": step.notes,
         "receipt": step.receipt,
     }
+    if step.envelopes:
+        document["sequence"] = True
+        document["envelopes"] = list(step.envelopes)
+    return document
 
 
 def _import_pep() -> tuple[Any, Any, Any, Any]:

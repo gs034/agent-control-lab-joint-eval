@@ -170,7 +170,9 @@ _B5_ROWS = (
 _B5_THREAT_IDS = tuple(item[0] for item in _B5_ROWS)
 _B5_CLASS_IDS = frozenset(item[1] for item in _B5_ROWS)
 _B5_CITE_ONLY_CLASS = "ifc_dataflow_violations"
-_INDEX_ROW_MAX = 54
+_B10_THREAT_ID = "acl-mc-supply-rug-pull-two-envelope-001"
+_B10_UNCHANGED_PIN_ID = "acl-mc-b5-rug-pull-unchanged-pin-runtime"
+_INDEX_ROW_MAX = 55
 _DENY_REASON_CODES = frozenset(
     {
         "TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY",
@@ -527,7 +529,9 @@ def test_seed_index_and_rows_match_schema():
     assert ids[v0_count] == _REPRESENTATION_MISMATCH_ID
     twin_end = v0_count + 1 + len(_BENIGN_TWINS)
     assert ids[v0_count + 1 : twin_end] == list(_BENIGN_TWINS)
-    assert ids[twin_end:] == list(_B5_THREAT_IDS)
+    b5_end = twin_end + len(_B5_THREAT_IDS)
+    assert ids[twin_end:b5_end] == list(_B5_THREAT_IDS)
+    assert ids[b5_end:] == [_B10_THREAT_ID]
     for row in rows[:v0_count]:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
         assert row["schema_version"] == "measured-corpus-row-v0"
@@ -712,7 +716,7 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     ]
     assert len(pep_deny_rows) == 11
     assert len(pep_allow_rows) == 3
-    assert len(by_family["supply_pin_head_verify"]) == 10
+    assert len(by_family["supply_pin_head_verify"]) == 11
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
     threat_rows = {row["taxonomy"]["class_id"]: row for row in by_family["threat_model"]}
     assert set(threat_rows) == _TM_CLASSES | _B5_CLASS_IDS
@@ -763,6 +767,8 @@ def test_arm_outcomes_stay_unmeasured():
                 assert arm["status"] != "not_mediated"
         elif row["threat_id"] in {_REPRESENTATION_MISMATCH_ID, *_B5_THREAT_IDS}:
             assert monitor["status"] == "not_mediated"
+        elif row["threat_id"] == _B10_THREAT_ID:
+            assert monitor["status"] == "stub"
         else:
             assert row["threat_id"] in _BENIGN_TWINS
             assert monitor["status"] == "stub"
@@ -1232,3 +1238,100 @@ def test_b5_not_mediated_rows_match_sealed_classification():
     }
     assert deny_codes == _DENY_REASON_CODES
     assert _B5_TABLE_ID not in deny_codes
+
+
+def test_b10_rug_pull_two_envelope_and_unchanged_pin_twin():
+    index = _load(INDEX_PATH)
+    binding = _load(BINDING_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+    assert binding["claim_cite_lineage"] == "1d0f380"
+    assert SUPPLY_GATE_SHA == "938769656e7cb311d1953dee9df22b79275e6c09"
+    rows = index["rows"]
+    assert len(rows) == _INDEX_ROW_MAX
+    row = next(item for item in rows if item["threat_id"] == _B10_THREAT_ID)
+    _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+    assert row["schema_version"] == "measured-corpus-row-v1"
+    assert row["taxonomy"]["family"] == "supply_pin_head_verify"
+    assert row["taxonomy"]["class_id"] == "rug_pull_two_envelope"
+    assert row["taxonomy"]["reason_codes"] == ["head_mismatch"]
+    assert row["taxonomy"]["mapped_receipt_decision"] == "DENY"
+    assert "head_mismatch" in _DENY_REASON_CODES
+    assert row["existence_proof_only"] is True
+    assert row["no_asr_claim"] is True
+    assert row["benign_twin_of"] is None
+    assert row["table_id"] is None
+    assert row["plane"] == "joint"
+    for name in _COUNTERS:
+        assert row[name] is None
+    assert "1d0f380" in row["notes"]
+    assert "No ASR" in row["notes"]
+    assert row["arms"]["monitor-alone"]["status"] == "stub"
+    assert row["arms"]["host-PEP-alone"]["status"] == "not_applicable"
+    assert row["arms"]["stack"]["status"] == "mapped"
+    assert row["arms"]["stack"]["decision"] == "DENY"
+    assert row["arms"]["stack"]["residual_asr"] is None
+    assert row["arms"]["stack"]["tip_pins"]["pep"] == PEP_SHA
+    assert row["arms"]["stack"]["tip_pins"]["supply_gate"] == SUPPLY_GATE_SHA
+    assert row["arms"]["stack"]["tip_pins"]["joint"] is None
+    assert len(row["fixtures"]) == 1
+    fixture = row["fixtures"][0]
+    assert fixture["role"] == "joint_story"
+    assert fixture["git_sha"] is None
+    assert fixture["source_id"] == "acl-joint-supply-rug-pull-two-envelope-001"
+    folder = ROOT / fixture["path"]
+    sequence = _load(folder / "sequence.json")
+    assert sequence["existence_proof_only"] is True
+    assert sequence["measured_attack_success_claimed"] is False
+    assert sequence["deny_reason"] == "head_mismatch"
+    assert sequence["unchanged_pin_runtime"]["status"] == "not_mediated"
+    assert sequence["unchanged_pin_runtime"]["corpus_threat_id"] == _B10_UNCHANGED_PIN_ID
+    assert sequence["unchanged_pin_runtime"]["table_id"] == _B5_TABLE_ID
+    assert [item["expected_decision"] for item in sequence["envelopes"]] == ["ALLOW", "DENY"]
+    allow = _load(folder / "envelope_1" / "expected_receipt.json")
+    deny = _load(folder / "envelope_2" / "expected_receipt.json")
+    allow_head = _load(folder / "envelope_1" / "observed_head.json")
+    deny_head = _load(folder / "envelope_2" / "observed_head.json")
+    allow_env = _load(folder / "envelope_1" / "envelope.json")
+    deny_env = _load(folder / "envelope_2" / "envelope.json")
+    assert allow["decision"] == "ALLOW"
+    assert allow["reasons"] == []
+    assert deny["decision"] == "DENY"
+    assert deny["reasons"] == ["head_mismatch"]
+    assert allow_env["expected_sha"] == deny_env["expected_sha"]
+    assert allow_head["observed_head"] == allow_env["expected_sha"]
+    assert deny_head["observed_head"] != deny_env["expected_sha"]
+    assert deny["observed_head"] == deny_head["observed_head"]
+    assert allow["verify_performed"] is True
+    assert deny["verify_performed"] is True
+
+    twin = next(item for item in rows if item["threat_id"] == _B10_UNCHANGED_PIN_ID)
+    assert twin["taxonomy"]["class_id"] == "rug_pull_unchanged_pin_runtime"
+    assert twin["taxonomy"]["reason_codes"] == []
+    assert twin["taxonomy"]["mapped_receipt_decision"] is None
+    assert twin["fixtures"] == []
+    assert twin["table_id"] == _B5_TABLE_ID
+    assert twin["plane"] == "supply"
+    for arm in twin["arms"].values():
+        assert arm["status"] == "not_mediated"
+        assert arm["decision"] is None
+        assert arm["residual_asr"] is None
+    bound_twin = next(
+        item for item in binding["rows"] if item["threat_id"] == _B10_UNCHANGED_PIN_ID
+    )
+    for arm_name in _ARMS:
+        assert bound_twin["arms"][arm_name] == {"status": "not_mediated", "decision": None}
+    bound = next(item for item in binding["rows"] if item["threat_id"] == _B10_THREAT_ID)
+    assert bound["class_id"] == "rug_pull_two_envelope"
+    assert bound["plane"] == "joint"
+    assert bound["table_id"] is None
+    assert bound["arms"]["stack"] == {"status": "mapped", "decision": "DENY"}
+    for name in _COUNTERS:
+        assert bound[name] is None
+    note = (CORPUS / "rug-pull-b10.md").read_text(encoding="utf-8")
+    assert "head_mismatch" in note
+    assert "not_mediated" in note
+    assert "1d0f380" in note
+    assert "No ASR" in note
+    assert "acl-mc-b5-rug-pull-unchanged-pin-runtime" in note

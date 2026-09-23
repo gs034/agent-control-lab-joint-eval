@@ -45,6 +45,7 @@ Live row-schema v1 words only.
 | Benign twin of a host DENY | `host` | `stub` | `mapped` / `ALLOW` | `not_applicable` |
 | `representation_mismatch` | `complementarity` | `not_mediated` | `not_mediated` | `not_mediated` |
 | B5 not-mediated honesty row | primary plane from the sealed class (`host`, `supply`, `joint`, or `complementarity`) | `not_mediated` | `not_mediated` | `not_mediated` |
+| B10 rug-pull two-envelope | `joint` | `stub` | `not_applicable` | `mapped` / `DENY` |
 
 Decisions on the 28 v0 rows stay the existence-proof values already in the seed. Host DENY notes add `Denial label: policy-intent.` This table does not add a DENY reason. B5 rows do not add one either.
 
@@ -57,6 +58,12 @@ Decisions on the 28 v0 rows stay the existence-proof values already in the seed.
 Every B5 honesty row is `measured-corpus-row-v1`, family `threat_model`, `fixtures` empty, `mapped_receipt_decision` null, `reason_codes` empty, `benign_twin_of` null, and the four counters null. `existence_proof_only` and `no_asr_claim` stay true. `residual_asr` stays null. `plane` is the primary plane token from the sealed class. A secondary plane, when the note names one, is recorded in `notes` only.
 
 `representation_mismatch` stays the B4 row: `plane` `complementarity`, `table_id` `acl-mediation-binding-v1`. It is not duplicated. `ifc_dataflow_violations` is cite-only in the sealed note (`suggested_table_id` null) and has no corpus row. The full not-mediated set, including those two classes, is published in [`coverage-b5.md`](coverage-b5.md). Claim cite stays `1d0f380`.
+
+## B10 rug-pull two-envelope
+
+`acl-mc-supply-rug-pull-two-envelope-001` is a v1 row appended after the B5 block. Family `supply_pin_head_verify`, class `rug_pull_two_envelope`, plane `joint`. Stack is mapped `DENY` with the existing reason `head_mismatch` on the second envelope. Envelope 1 is `ALLOW` when the pin matches observed HEAD. Host-PEP-alone is `not_applicable`. Monitor-alone is `stub`. Counters are null. `residual_asr` is null. `table_id` is null: this row is a mapped existence proof, not a coverage table, and it does not add a second coverage table id.
+
+The unchanged-pin runtime twin stays the sealed B5 row `acl-mc-b5-rug-pull-unchanged-pin-runtime`: `not_mediated` on every arm, `table_id` `acl-coverage-b5-v1`, no fixture, no DENY reason. This binding does not rewrite that classification. See [`rug-pull-b10.md`](rug-pull-b10.md). Acceptance is sealed B10 / SupplyPlane S5. Claim cite stays `1d0f380`. No ASR.
 
 ## `representation_mismatch` example
 

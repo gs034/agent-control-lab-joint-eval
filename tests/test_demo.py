@@ -25,12 +25,18 @@ def test_demo_exits_zero_on_expected_denies(capsys):
 def test_story_every_step_denies_without_invoke():
     result = run_joint_story(root=ROOT)
     assert result.ok
-    assert len(result.steps) == 4
+    assert len(result.steps) == 5
     ids = [step.step_id for step in result.steps]
     assert ids[0].endswith("plugin4shell-class-001")
     assert ids[1].endswith("pin-without-verify-001")
     assert ids[2].endswith("monitor-bypass-prose-001")
     assert ids[3].endswith("approval-binding-001")
+    assert ids[4].endswith("rug-pull-two-envelope-001")
+    rug = result.steps[4]
+    assert rug.envelopes[0]["decision"] == "ALLOW"
+    assert rug.envelopes[1]["decision"] == "DENY"
+    assert rug.envelopes[1]["receipt"]["reasons"] == ["head_mismatch"]
+    assert rug.invoked is False
     for step in result.steps:
         assert step.decision == "DENY"
         assert step.expected_decision == "DENY"

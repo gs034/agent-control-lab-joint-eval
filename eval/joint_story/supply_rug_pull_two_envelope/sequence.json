@@ -1,0 +1,28 @@
+{
+  "brand": "Agent Control Lab",
+  "licence": "Apache-2.0",
+  "fixture_id": "acl-joint-supply-rug-pull-two-envelope-001",
+  "existence_proof_only": true,
+  "measured_attack_success_claimed": false,
+  "deny_reason": "head_mismatch",
+  "envelopes": [
+    {
+      "id": "envelope_1",
+      "dir": "envelope_1",
+      "expected_decision": "ALLOW",
+      "role": "pinned_install_head_matches"
+    },
+    {
+      "id": "envelope_2",
+      "dir": "envelope_2",
+      "expected_decision": "DENY",
+      "role": "later_update_observed_head_differs"
+    }
+  ],
+  "unchanged_pin_runtime": {
+    "status": "not_mediated",
+    "corpus_threat_id": "acl-mc-b5-rug-pull-unchanged-pin-runtime",
+    "table_id": "acl-coverage-b5-v1",
+    "note": "Behavioural change with an unchanged pin is outside supply-gate mediation. This fixture does not invent a DENY for that case. There is no Lab content scanner."
+  }
+}

@@ -2,9 +2,11 @@
 
 Contract for a **future** three-arm runner. Brand: Agent Control Lab. Apache-2.0.
 
-This directory is the v1 delta on a 28-row v0 seed map, plus the `representation_mismatch` v1 row, 3 benign-twin rows, 22 B5 coverage honesty rows, and a mediation binding. The schema accepts `measured-corpus-row-v0` and `measured-corpus-row-v1`. It does **not** run fixtures and it is **not** a measured attack-success table. **No ASR.** `residual_asr` on every arm is JSON `null`.
+This directory is the v1 delta on a 28-row v0 seed map, plus the `representation_mismatch` v1 row, 3 benign-twin rows, 22 B5 coverage honesty rows, one B10 rug-pull two-envelope row, and a mediation binding. The schema accepts `measured-corpus-row-v0` and `measured-corpus-row-v1`. It does **not** run fixtures and it is **not** a measured attack-success table. **No ASR.** `residual_asr` on every arm is JSON `null`.
 
 Arms are `monitor-alone`, `host-PEP-alone`, and `stack`. The v1 delta adds arm status `not_mediated` and optional row fields (`benign_twin_of`, counters, `table_id`, `plane`). The 28 v0 seed bodies stay v0 aside from a policy-intent denial label in host DENY notes. `representation_mismatch` is `not_mediated` on every arm. The benign twins are v1 rows with null counters and `host-PEP-alone` mapped `ALLOW`. The B5 honesty rows are v1, `not_mediated` on every arm, `table_id` `acl-coverage-b5-v1`, and null counters. `residual_asr` stays null. Claim cite stays `1d0f380`. `runner_implemented` stays false.
+
+B10 ([`rug-pull-b10.md`](rug-pull-b10.md)) adds one v1 row, `acl-mc-supply-rug-pull-two-envelope-001`. It is a joint-story existence proof: envelope 1 `ALLOW` when the pin matches observed HEAD, envelope 2 `DENY` with the existing reason `head_mismatch`. Stack is mapped `DENY`. Counters are null. `table_id` is null (mapped proof, not a coverage table). The unchanged-pin runtime twin stays the B5 row `acl-mc-b5-rug-pull-unchanged-pin-runtime` (`not_mediated` on every arm, `table_id` `acl-coverage-b5-v1`). No new DENY reason code. No ASR. The sealed B5 classification is unchanged.
 
 - Schema: [`schema/row.schema.json`](schema/row.schema.json) (field definitions in [`schema/README.md`](schema/README.md))
 - Seed map: [`index.json`](index.json) — pointers at pinned pep and supply-gate fixtures and at `eval/joint_story/`. Sibling trees are not copied
