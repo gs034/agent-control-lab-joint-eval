@@ -81,7 +81,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md
 | --- | --- |
 | `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo` |
 | `eval/joint_story/` | Joint fixtures + frozen expected receipts |
-| `eval/measured_corpus/` | v0 row schema + seed map (future three-arm contract; not a runner) |
+| `eval/measured_corpus/` | Row schema (v1 delta; v0 seed rows still valid) + seed map. Not a runner |
 | `docs/measured-corpus-v0.md` | What that contract claims and does not claim |
 | `docs/adr/ADR-0001-joint-eval-architecture.md` | Why pin-and-invoke, not vendor |
 | `docs/threat-model.md` | Threat classes by arXiv / pattern name |

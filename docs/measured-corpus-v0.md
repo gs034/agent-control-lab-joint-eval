@@ -43,7 +43,7 @@ Pointers name sibling paths and joint_story paths. Sibling trees are not copied.
 
 Public/EOI claim cite stays pep diligence tip **`1d0f380`** (`1d0f3809a4a16d4a6ac3524b287cf719f192e1f9`) until there is a measured table and Cyber PASS.
 
-This seed does not lift that bar. `existence_proof_only` and `no_asr_claim` are frozen `true`. `residual_asr` cannot hold a number in this schema. `runner_implemented` and `measured_attack_success_claimed` are frozen `false`.
+This seed does not lift that bar. Every seed row keeps `existence_proof_only` and `no_asr_claim` true. `residual_asr` cannot hold a number in this schema. `runner_implemented` and `measured_attack_success_claimed` are frozen `false`.
 
 Install pins in `joint_eval/pins.py` are how this harness installs packages. A row may copy those SHAs into `tip_pins` when an arm is mapped to that package. `tip_pins.joint` is `null` in v0. After this contract is on the joint repo tip, a later diligence note may record that tip. Recording it does not change the `1d0f380` claim cite.
 
@@ -51,7 +51,13 @@ Install pins in `joint_eval/pins.py` are how this harness installs packages. A r
 
 - A three-arm runner or any harness loop
 - GitHub Actions workflow edits
-- A filled residual ASR, a monitor score, or any other metric
+- A filled residual ASR or a monitor score (`residual_asr` stays null). The v1 delta adds trial-count slots; this seed does not fill them
 - Copies of sibling fixture trees
 - Payments-domain cases
 - Changes to coverage-limit or EOI claim prose elsewhere in this repo
+
+## v1 delta
+
+The row schema is a v1 delta on this contract. It still accepts every v0 seed row with `schema_version` `measured-corpus-row-v0` and with the v1 keys omitted. `measured-corpus-row-v1` is also accepted.
+
+Optional fields: arm status `not_mediated` (`decision` null; the gate does not mediate that threat), `benign_twin_of` (threat id or null), counters `attempted`, `reached_tool`, `attempted_benign`, `blocked_benign` (integer ≥ 0 or null), `table_id` (string or null), and `plane` (`host`, `supply`, `joint`, `complementarity`, or null). When `existence_proof_only` is true, every counter must be null. `residual_asr` stays null only. `no_asr_claim` stays true. The public/EOI claim cite stays pep diligence tip **`1d0f380`**. This note records no ASR and no filled counts. Field rules are in [`eval/measured_corpus/schema/README.md`](../eval/measured_corpus/schema/README.md).
