@@ -7,7 +7,7 @@ JSON Schema (draft 2020-12):
 | File | What it checks |
 | --- | --- |
 | [`row.schema.json`](row.schema.json) | One threat row. Accepts `measured-corpus-row-v0` and `measured-corpus-row-v1` |
-| [`index.schema.json`](index.schema.json) | Seed envelope (`rows[]` length 20–55; each item `$ref`s the row schema). `arms` is exactly `["monitor-alone", "host-PEP-alone", "stack"]` |
+| [`index.schema.json`](index.schema.json) | Seed envelope (`rows[]` length 20–56; each item `$ref`s the row schema). `arms` is exactly `["monitor-alone", "host-PEP-alone", "stack"]` |
 
 Neither schema sets an absolute `$id`. Load the checked-out `index.schema.json` so a stock Draft 2020-12 resolver uses that file's retrieval URI as the base; `rows.items.$ref` (`row.schema.json`) then resolves to the adjacent file in this directory. Do not add an `https://github.com/...` `$id`: that URL is an HTML page, and the relative reference would resolve against it instead of this bundle. A relative `$id` is not a substitute; resolvers that take `$id` as the base without joining it to the retrieval URI look for `row.schema.json` in the process working directory.
 

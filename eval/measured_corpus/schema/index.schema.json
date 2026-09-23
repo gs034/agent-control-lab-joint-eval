@@ -47,7 +47,7 @@
     "rows": {
       "type": "array",
       "minItems": 20,
-      "maxItems": 55,
+      "maxItems": 56,
       "items": { "$ref": "row.schema.json" }
     }
   }

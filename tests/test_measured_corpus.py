@@ -172,7 +172,9 @@ _B5_CLASS_IDS = frozenset(item[1] for item in _B5_ROWS)
 _B5_CITE_ONLY_CLASS = "ifc_dataflow_violations"
 _B10_THREAT_ID = "acl-mc-supply-rug-pull-two-envelope-001"
 _B10_UNCHANGED_PIN_ID = "acl-mc-b5-rug-pull-unchanged-pin-runtime"
-_INDEX_ROW_MAX = 55
+_B11_THREAT_ID = "acl-mc-adaptive-attack-monitor-injection-001"
+_B11_CLASS_ID = "adaptive_attack_monitor_injection"
+_INDEX_ROW_MAX = 56
 _DENY_REASON_CODES = frozenset(
     {
         "TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY",
@@ -531,7 +533,7 @@ def test_seed_index_and_rows_match_schema():
     assert ids[v0_count + 1 : twin_end] == list(_BENIGN_TWINS)
     b5_end = twin_end + len(_B5_THREAT_IDS)
     assert ids[twin_end:b5_end] == list(_B5_THREAT_IDS)
-    assert ids[b5_end:] == [_B10_THREAT_ID]
+    assert ids[b5_end:] == [_B10_THREAT_ID, _B11_THREAT_ID]
     for row in rows[:v0_count]:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
         assert row["schema_version"] == "measured-corpus-row-v0"
@@ -719,9 +721,13 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     assert len(by_family["supply_pin_head_verify"]) == 11
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
     threat_rows = {row["taxonomy"]["class_id"]: row for row in by_family["threat_model"]}
-    assert set(threat_rows) == _TM_CLASSES | _B5_CLASS_IDS
+    assert set(threat_rows) == _TM_CLASSES | _B5_CLASS_IDS | {_B11_CLASS_ID}
     for class_id, row in threat_rows.items():
-        if class_id == "representation_mismatch" or class_id in _B5_CLASS_IDS:
+        if (
+            class_id == "representation_mismatch"
+            or class_id in _B5_CLASS_IDS
+            or class_id == _B11_CLASS_ID
+        ):
             assert row["taxonomy"]["mapped_receipt_decision"] is None
             assert row["taxonomy"]["reason_codes"] == []
         else:
@@ -767,7 +773,7 @@ def test_arm_outcomes_stay_unmeasured():
                 assert arm["status"] != "not_mediated"
         elif row["threat_id"] in {_REPRESENTATION_MISMATCH_ID, *_B5_THREAT_IDS}:
             assert monitor["status"] == "not_mediated"
-        elif row["threat_id"] == _B10_THREAT_ID:
+        elif row["threat_id"] in {_B10_THREAT_ID, _B11_THREAT_ID}:
             assert monitor["status"] == "stub"
         else:
             assert row["threat_id"] in _BENIGN_TWINS
@@ -1335,3 +1341,93 @@ def test_b10_rug_pull_two_envelope_and_unchanged_pin_twin():
     assert "1d0f380" in note
     assert "No ASR" in note
     assert "acl-mc-b5-rug-pull-unchanged-pin-runtime" in note
+
+
+def test_b11_adaptive_attack_monitor_injection_envelope_unchanged():
+    index = _load(INDEX_PATH)
+    binding = _load(BINDING_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    index_schema = _load(INDEX_SCHEMA_PATH)
+    assert index_schema["properties"]["rows"]["maxItems"] == _INDEX_ROW_MAX
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+    assert index["measured_attack_success_claimed"] is False
+    assert binding["claim_cite_lineage"] == "1d0f380"
+    rows = index["rows"]
+    assert len(rows) == _INDEX_ROW_MAX
+    assert [row["threat_id"] for row in rows][-2:] == [_B10_THREAT_ID, _B11_THREAT_ID]
+    row = next(item for item in rows if item["threat_id"] == _B11_THREAT_ID)
+    _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+    assert row["schema_version"] == "measured-corpus-row-v1"
+    assert row["taxonomy"]["family"] == "threat_model"
+    assert row["taxonomy"]["class_id"] == _B11_CLASS_ID
+    assert row["taxonomy"]["reason_codes"] == []
+    assert row["taxonomy"]["mapped_receipt_decision"] is None
+    assert row["fixtures"] == []
+    assert row["existence_proof_only"] is True
+    assert row["no_asr_claim"] is True
+    assert row["benign_twin_of"] is None
+    assert row["table_id"] is None
+    assert row["plane"] == "complementarity"
+    for name in _COUNTERS:
+        assert row[name] is None
+    assert row["arms"]["monitor-alone"]["status"] == "stub"
+    assert row["arms"]["host-PEP-alone"]["status"] == "not_applicable"
+    assert row["arms"]["stack"]["status"] == "not_applicable"
+    for arm in row["arms"].values():
+        assert arm["decision"] is None
+        assert arm["residual_asr"] is None
+        assert arm["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
+    assert "1d0f380" in row["notes"]
+    assert "No ASR" in row["notes"]
+    assert "acl-mc-pep-monitor-coax-001" in row["notes"]
+    assert "pep_monitor_bypass_prose" in row["notes"]
+    assert "envelope" in row["notes"]
+    coax = next(item for item in rows if item["threat_id"] == "acl-mc-pep-monitor-coax-001")
+    assert coax["taxonomy"]["class_id"] == "monitor_coax"
+    assert coax["taxonomy"]["reason_codes"] == ["agent_prose_rejected"]
+    assert coax["taxonomy"]["mapped_receipt_decision"] == "DENY"
+    assert coax["arms"]["host-PEP-alone"]["decision"] == "DENY"
+    assert coax["arms"]["stack"]["decision"] == "DENY"
+    assert any(
+        fixture["role"] == "joint_story"
+        and fixture["path"] == "eval/joint_story/pep_monitor_bypass_prose/"
+        for fixture in coax["fixtures"]
+    )
+    deny_codes = {
+        code
+        for item in rows
+        if item["taxonomy"]["mapped_receipt_decision"] == "DENY"
+        for code in item["taxonomy"]["reason_codes"]
+    }
+    assert deny_codes == _DENY_REASON_CODES
+    assert _B11_CLASS_ID not in {
+        item["taxonomy"]["class_id"]
+        for item in rows
+        if item["taxonomy"]["mapped_receipt_decision"] == "DENY"
+    }
+    bound = next(item for item in binding["rows"] if item["threat_id"] == _B11_THREAT_ID)
+    assert bound["schema_version"] == "measured-corpus-row-v1"
+    assert bound["family"] == "threat_model"
+    assert bound["class_id"] == _B11_CLASS_ID
+    assert bound["plane"] == "complementarity"
+    assert bound["table_id"] is None
+    assert bound["benign_twin_of"] is None
+    for name in _COUNTERS:
+        assert bound[name] is None
+    assert bound["arms"]["monitor-alone"] == {"status": "stub", "decision": None}
+    assert bound["arms"]["host-PEP-alone"] == {"status": "not_applicable", "decision": None}
+    assert bound["arms"]["stack"] == {"status": "not_applicable", "decision": None}
+    note = (CORPUS / "adaptive-attack-b11.md").read_text(encoding="utf-8")
+    assert _B11_THREAT_ID in note
+    assert _B11_CLASS_ID in note
+    assert "not_applicable" in note
+    assert "stub" in note
+    assert "1d0f380" in note
+    assert "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9" in note
+    assert "No ASR" in note
+    assert "acl-mc-pep-monitor-coax-001" in note
+    assert "pep_monitor_bypass_prose" in note
+    assert "envelope" in note
+    assert _B11_THREAT_ID in (CORPUS / "README.md").read_text(encoding="utf-8")
+    assert _B11_THREAT_ID in BINDING_DOC_PATH.read_text(encoding="utf-8")
