@@ -40,4 +40,8 @@ def _installed_commit(package: str) -> str:
     ids=["pep", "supply_gate"],
 )
 def test_installed_sibling_is_the_pinned_commit(package: str, pinned: str) -> None:
-    assert _installed_commit(package) == pinned
+    installed = _installed_commit(package)
+    assert installed == pinned, (
+        f"{package} is installed at {installed}, pinned at {pinned}; "
+        "uninstall both sibling packages and re-run pip install -e '.[dev]' (see README)"
+    )

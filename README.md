@@ -56,6 +56,15 @@ That clones the commit into the environment’s `site-packages`. This repo keeps
 
 Pins are also listed in `joint_eval/pins.py`. Bump both files together.
 
+**Updating an existing environment.** pip keeps an already-installed sibling whose version number has not changed, so after a pin bump `python -m pip install -e ".[dev]"` can leave the old commit in `site-packages`. `tests/test_installed_pins.py` reads pip's install record (PEP 610 `direct_url.json`) and fails when the installed commit is not the pinned one. Recovery:
+
+```bash
+python -m pip uninstall -y agent-control-lab-pep agent-control-lab-supply-gate
+python -m pip install -e ".[dev]"
+```
+
+A fresh environment (the CI runner is one) needs no extra step.
+
 ## Coverage limits
 
 See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md`](docs/threat-model.md), and the Lab-wide synthesis across both planes, [`docs/lab-threat-model.md`](docs/lab-threat-model.md). Short version:
