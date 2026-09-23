@@ -47,7 +47,7 @@ Each arm is an outcome with `status`, `decision`, `residual_asr`, and `tip_pins`
 | --- | --- | --- | --- |
 | `monitor-alone` | `stub`, `not_applicable`, or `not_mediated` | JSON `null` | `pep`, `supply_gate`, and `joint` may be null |
 | `host-PEP-alone` | `mapped`, `not_applicable`, or `not_mediated`. `stub` is not valid | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` otherwise | `mapped` requires `pep` (40-hex install SHA). `supply_gate` and `joint` may be null. Non-mapped pins may be null |
-| `stack` | `mapped`, `not_applicable`, or `not_mediated`. `stub` is not valid | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` otherwise | `mapped` requires `pep` and `supply_gate` (40-hex install SHAs). `joint` may stay null. Non-mapped pins may be null |
+| `stack` | `mapped`, `stub`, `not_applicable`, or `not_mediated` | `DENY` or `ALLOW` when `status` is `mapped`; JSON `null` otherwise | `mapped` requires `pep` and `supply_gate` (40-hex install SHAs). `joint` may stay null. Non-mapped pins may be null |
 
 `host-PEP-alone` `mapped` is the host-PEP-alone existence-proof. `stack` `mapped` is the stack existence-proof. Neither mapped outcome is valid on `monitor-alone`.
 
@@ -58,7 +58,7 @@ Each arm is an outcome with `status`, `decision`, `residual_asr`, and `tip_pins`
 | `status` | Definition |
 | --- | --- |
 | `mapped` | Existence-proof outcome. `decision` is `DENY` or `ALLOW`. On `host-PEP-alone`, `tip_pins.pep` is the pep install SHA. On `stack`, `tip_pins.pep` and `tip_pins.supply_gate` are the sibling install SHAs, and `joint` may be null. Not valid on `monitor-alone` |
-| `stub` | Monitor-alone placeholder. `decision` is JSON `null`. Not valid on `host-PEP-alone` or `stack`. Pins may be null |
+| `stub` | Future-measure placeholder on `monitor-alone` or `stack`. `decision` is JSON `null`. Not valid on `host-PEP-alone`. Pins may be null. Not an ASR and not a DENY |
 | `not_applicable` | This arm is not the control for the threat. `decision` is JSON `null`. Valid on `monitor-alone`, `host-PEP-alone`, and `stack`. Pins may be null |
 | `not_mediated` | Coverage / honesty outcome for a threat this gate does not mediate. `decision` is JSON `null`. `residual_asr` is JSON `null`. Pins may be null. Valid on `monitor-alone`, `host-PEP-alone`, and `stack`. Not a measured rate |
 

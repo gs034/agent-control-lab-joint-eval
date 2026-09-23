@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$comment": "No absolute $id. Load this checked-out file so its retrieval URI is the base. Do not set $id to a GitHub HTML URL.",
   "title": "Agent Control Lab measured-corpus row (v1 delta)",
-  "description": "Contract for one threat a future three-arm runner may load. Arms are monitor-alone, host-PEP-alone, and stack. schema_version measured-corpus-row-v0 and measured-corpus-row-v1 are both valid; v0 seed bodies stay valid. v1 adds arm status not_mediated (decision null) and optional benign_twin_of, table_id, plane, and counters attempted, reached_tool, attempted_benign, blocked_benign. When existence_proof_only is true, every counter is null or absent. residual_asr is a null placeholder, not a filled rate. mapped requires decision DENY or ALLOW. stub, not_applicable, and not_mediated require decision null. stub is valid only on monitor-alone. host-PEP-alone mapped requires tip_pins.pep. stack mapped requires tip_pins.pep and tip_pins.supply_gate. joint may be null. stub, not_applicable, and not_mediated may leave pins null. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 until a measured table and Cyber PASS.",
+  "description": "Contract for one threat a future three-arm runner may load. Arms are monitor-alone, host-PEP-alone, and stack. schema_version measured-corpus-row-v0 and measured-corpus-row-v1 are both valid; v0 seed bodies stay valid. v1 adds arm status not_mediated (decision null) and optional benign_twin_of, table_id, plane, and counters attempted, reached_tool, attempted_benign, blocked_benign. When existence_proof_only is true, every counter is null or absent. residual_asr is a null placeholder, not a filled rate. mapped requires decision DENY or ALLOW. stub, not_applicable, and not_mediated require decision null. stub is valid on monitor-alone and stack, and is not valid on host-PEP-alone. host-PEP-alone mapped requires tip_pins.pep. stack mapped requires tip_pins.pep and tip_pins.supply_gate. joint may be null. stub, not_applicable, and not_mediated may leave pins null. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 until a measured table and Cyber PASS.",
   "type": "object",
   "additionalProperties": false,
   "$defs": {
@@ -109,7 +109,7 @@
       }
     },
     "stub_outcome": {
-      "description": "Monitor-alone placeholder. decision is null. Not valid for host-PEP-alone or stack.",
+      "description": "Future-measure placeholder. decision is null. Valid on monitor-alone and stack. Not valid on host-PEP-alone. Not an ASR and not a DENY.",
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "decision", "residual_asr", "tip_pins"],
@@ -232,9 +232,10 @@
           ]
         },
         "stack": {
-          "description": "mapped (DENY or ALLOW, with tip_pins.pep and tip_pins.supply_gate), not_applicable, or not_mediated (null decision, pins may be null). stub is not valid.",
+          "description": "mapped (DENY or ALLOW, with tip_pins.pep and tip_pins.supply_gate), stub, not_applicable, or not_mediated. stub, not_applicable, and not_mediated require a null decision and may leave pins null. stub is a future-measure slot, not an ASR and not a DENY.",
           "oneOf": [
             { "$ref": "#/$defs/stack_mapped_outcome" },
+            { "$ref": "#/$defs/stub_outcome" },
             { "$ref": "#/$defs/not_applicable_outcome" },
             { "$ref": "#/$defs/not_mediated_outcome" }
           ]

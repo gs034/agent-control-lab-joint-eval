@@ -476,6 +476,7 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     ]
     assert arms["properties"]["stack"]["oneOf"] == [
         {"$ref": "#/$defs/stack_mapped_outcome"},
+        {"$ref": "#/$defs/stub_outcome"},
         {"$ref": "#/$defs/not_applicable_outcome"},
         mediated,
     ]
@@ -595,6 +596,7 @@ def test_index_schema_enforces_row_contract_arm_order_and_status_decision():
         ("host-PEP-alone", _outcome("not_mediated", None)),
         ("stack", _outcome("mapped", "ALLOW", pep=PEP_SHA, supply_gate=SUPPLY_GATE_SHA)),
         ("stack", _outcome("not_applicable", None)),
+        ("stack", _outcome("stub", None)),
         ("stack", _outcome("not_mediated", None)),
         ("host-PEP-alone", _outcome("not_applicable", None)),
     )
@@ -607,7 +609,7 @@ def test_index_schema_enforces_row_contract_arm_order_and_status_decision():
         ("monitor-alone", _outcome("stub", "DENY")),
         ("stack", _outcome("not_applicable", "ALLOW")),
         ("host-PEP-alone", _outcome("not_applicable", "DENY")),
-        ("stack", _outcome("stub", None)),
+        ("stack", _outcome("stub", "DENY")),
         ("host-PEP-alone", _outcome("stub", None)),
         ("monitor-alone", _outcome("mapped", "DENY")),
         ("monitor-alone", _outcome("stub", "ALLOW")),
@@ -1373,7 +1375,7 @@ def test_b11_adaptive_attack_monitor_injection_envelope_unchanged():
         assert row[name] is None
     assert row["arms"]["monitor-alone"]["status"] == "stub"
     assert row["arms"]["host-PEP-alone"]["status"] == "not_applicable"
-    assert row["arms"]["stack"]["status"] == "not_applicable"
+    assert row["arms"]["stack"]["status"] == "stub"
     for arm in row["arms"].values():
         assert arm["decision"] is None
         assert arm["residual_asr"] is None
@@ -1417,7 +1419,7 @@ def test_b11_adaptive_attack_monitor_injection_envelope_unchanged():
         assert bound[name] is None
     assert bound["arms"]["monitor-alone"] == {"status": "stub", "decision": None}
     assert bound["arms"]["host-PEP-alone"] == {"status": "not_applicable", "decision": None}
-    assert bound["arms"]["stack"] == {"status": "not_applicable", "decision": None}
+    assert bound["arms"]["stack"] == {"status": "stub", "decision": None}
     note = (CORPUS / "adaptive-attack-b11.md").read_text(encoding="utf-8")
     assert _B11_THREAT_ID in note
     assert _B11_CLASS_ID in note
