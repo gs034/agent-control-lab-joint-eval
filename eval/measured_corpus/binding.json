@@ -638,6 +638,69 @@
           "decision": null
         }
       }
+    },
+    {
+      "threat_id": "acl-mc-benign-allow-catalog-bound-001",
+      "schema_version": "measured-corpus-row-v1",
+      "family": "pep_deny",
+      "class_id": "allow_catalog_bound",
+      "plane": "host",
+      "arms": {
+        "monitor-alone": {
+          "status": "stub",
+          "decision": null
+        },
+        "host-PEP-alone": {
+          "status": "mapped",
+          "decision": "ALLOW"
+        },
+        "stack": {
+          "status": "not_applicable",
+          "decision": null
+        }
+      }
+    },
+    {
+      "threat_id": "acl-mc-benign-allow-approval-bound-001",
+      "schema_version": "measured-corpus-row-v1",
+      "family": "pep_deny",
+      "class_id": "allow_catalog_bound",
+      "plane": "host",
+      "arms": {
+        "monitor-alone": {
+          "status": "stub",
+          "decision": null
+        },
+        "host-PEP-alone": {
+          "status": "mapped",
+          "decision": "ALLOW"
+        },
+        "stack": {
+          "status": "not_applicable",
+          "decision": null
+        }
+      }
+    },
+    {
+      "threat_id": "acl-mc-benign-allow-approval-state-bound-001",
+      "schema_version": "measured-corpus-row-v1",
+      "family": "pep_deny",
+      "class_id": "allow_catalog_bound",
+      "plane": "host",
+      "arms": {
+        "monitor-alone": {
+          "status": "stub",
+          "decision": null
+        },
+        "host-PEP-alone": {
+          "status": "mapped",
+          "decision": "ALLOW"
+        },
+        "stack": {
+          "status": "not_applicable",
+          "decision": null
+        }
+      }
     }
   ]
 }

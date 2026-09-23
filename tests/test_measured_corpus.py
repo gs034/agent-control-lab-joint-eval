@@ -127,6 +127,45 @@ _TM_CLASSES = frozenset(
 )
 _STATUS_VOCABULARY = ("mapped", "stub", "not_applicable", "not_mediated")
 _PLANE_VOCABULARY = ("host", "supply", "joint", "complementarity")
+_PEP_CORPUS_ALLOW_IDS = frozenset(
+    {
+        "acl-pep-eval-allow-catalog-bound-001",
+        "acl-pep-eval-allow-approval-bound-001",
+        "acl-pep-eval-allow-approval-state-bound-001",
+    }
+)
+_BENIGN_TWINS = {
+    "acl-mc-benign-allow-catalog-bound-001": "acl-mc-pep-capability-spoof-001",
+    "acl-mc-benign-allow-approval-bound-001": "acl-mc-pep-approval-binding-001",
+    "acl-mc-benign-allow-approval-state-bound-001": "acl-mc-tm-approve-then-mutate-001",
+}
+_DENY_REASON_CODES = frozenset(
+    {
+        "TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY",
+        "agent_prose_rejected",
+        "allowlist_invalid",
+        "approval_binding_mismatch",
+        "approval_consumed",
+        "approval_expired",
+        "approval_invalid",
+        "approval_state_mismatch",
+        "capability_missing",
+        "head_mismatch",
+        "hook_update_unverified",
+        "kill_active",
+        "late_effect_fence",
+        "mcp_server_unpinned",
+        "origin_not_allowlisted",
+        "policy_miss",
+        "prose_rejected_as_policy",
+        "skill_shell_preapproved",
+        "suspend_active",
+        "update_policy_rejected",
+        "verify_missing",
+    }
+)
+_POLICY_INTENT = "Denial label: policy-intent."
+_RULE_ERROR = "Denial label: rule-error."
 
 
 def _load(path: Path) -> Any:
@@ -451,16 +490,20 @@ def test_seed_index_and_rows_match_schema():
     assert 20 <= len(rows) <= 50
     ids = [row["threat_id"] for row in rows]
     assert len(ids) == len(set(ids))
-    assert ids[:-1] == list(_V0_THREAT_IDS)
-    assert ids[-1] == _REPRESENTATION_MISMATCH_ID
-    for row in rows[:-1]:
+    v0_count = len(_V0_THREAT_IDS)
+    assert ids[:v0_count] == list(_V0_THREAT_IDS)
+    assert ids[v0_count] == _REPRESENTATION_MISMATCH_ID
+    assert ids[v0_count + 1 :] == list(_BENIGN_TWINS)
+    for row in rows[:v0_count]:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
         assert row["schema_version"] == "measured-corpus-row-v0"
         assert row["existence_proof_only"] is True
         assert row["no_asr_claim"] is True
         for name in ("benign_twin_of", "table_id", "plane", *_COUNTERS):
             assert name not in row
-    _assert_valid(rows[-1], row_schema, ROW_SCHEMA_PATH)
+    for row in rows[len(_V0_THREAT_IDS) :]:
+        _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+        assert row["schema_version"] == "measured-corpus-row-v1"
 
 
 def _outcome(
@@ -626,7 +669,15 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
     by_family: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         by_family.setdefault(row["taxonomy"]["family"], []).append(row)
-    assert len(by_family["pep_deny"]) == 11
+    pep_rows = by_family["pep_deny"]
+    pep_deny_rows = [
+        row for row in pep_rows if row["taxonomy"]["mapped_receipt_decision"] == "DENY"
+    ]
+    pep_allow_rows = [
+        row for row in pep_rows if row["taxonomy"]["mapped_receipt_decision"] == "ALLOW"
+    ]
+    assert len(pep_deny_rows) == 11
+    assert len(pep_allow_rows) == 3
     assert len(by_family["supply_pin_head_verify"]) == 10
     assert {row["taxonomy"]["class_id"] for row in by_family["noul_taxonomy"]} == _NOUL_CLASSES
     threat_rows = {row["taxonomy"]["class_id"]: row for row in by_family["threat_model"]}
@@ -640,14 +691,21 @@ def test_seed_covers_pep_supply_noul_and_threat_model_classes():
 
     pep_ids = {
         fixture["source_id"]
-        for row in by_family["pep_deny"]
+        for row in pep_deny_rows
         for fixture in row["fixtures"]
         if fixture["role"] == "pep_corpus"
     }
     assert pep_ids == _PEP_CORPUS_DENY_IDS
+    allow_ids = {
+        fixture["source_id"]
+        for row in pep_allow_rows
+        for fixture in row["fixtures"]
+        if fixture["role"] == "pep_corpus"
+    }
+    assert allow_ids == _PEP_CORPUS_ALLOW_IDS
     official = [
         fixture["source_id"]
-        for row in by_family["pep_deny"]
+        for row in pep_deny_rows
         for fixture in row["fixtures"]
         if fixture["role"] == "pep_official"
     ]
@@ -669,9 +727,11 @@ def test_arm_outcomes_stay_unmeasured():
             assert monitor["status"] in {"stub", "not_applicable"}
             for arm in row["arms"].values():
                 assert arm["status"] != "not_mediated"
-        else:
-            assert row["threat_id"] == _REPRESENTATION_MISMATCH_ID
+        elif row["threat_id"] == _REPRESENTATION_MISMATCH_ID:
             assert monitor["status"] == "not_mediated"
+        else:
+            assert row["threat_id"] in _BENIGN_TWINS
+            assert monitor["status"] == "stub"
         assert monitor["decision"] is None
         assert monitor["residual_asr"] is None
         assert monitor["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
@@ -700,9 +760,9 @@ def test_arm_outcomes_stay_unmeasured():
         family = row["taxonomy"]["family"]
         if family == "pep_deny":
             assert host["status"] == "mapped"
-            assert host["decision"] == "DENY"
+            assert host["decision"] == row["taxonomy"]["mapped_receipt_decision"]
+            assert host["decision"] in {"DENY", "ALLOW"}
             assert host["tip_pins"]["pep"] == PEP_SHA
-            assert row["taxonomy"]["mapped_receipt_decision"] == "DENY"
         elif family == "supply_pin_head_verify":
             assert host["status"] == "not_applicable"
             assert host["decision"] is None
@@ -939,7 +999,7 @@ def test_binding_table_matches_seed_arms_and_vocabulary():
 def test_representation_mismatch_not_mediated_row_validates():
     index = _load(INDEX_PATH)
     row_schema = _load(ROW_SCHEMA_PATH)
-    seed = index["rows"][-1]
+    seed = next(row for row in index["rows"] if row["threat_id"] == _REPRESENTATION_MISMATCH_ID)
     example = _documented_example_row()
     assert example == seed
     _assert_valid(seed, row_schema, ROW_SCHEMA_PATH)
@@ -960,7 +1020,9 @@ def test_representation_mismatch_not_mediated_row_validates():
     assert set(seed["arms"]) == set(_ARMS)
     for name in _COUNTERS:
         assert seed[name] is None
-    bound = _load(BINDING_PATH)["rows"][-1]
+    bound = next(
+        row for row in _load(BINDING_PATH)["rows"] if row["threat_id"] == _REPRESENTATION_MISMATCH_ID
+    )
     assert bound["threat_id"] == seed["threat_id"]
     assert bound["plane"] == "complementarity"
     assert bound["table_id"] == _BINDING_TABLE_ID
@@ -978,3 +1040,77 @@ def test_representation_mismatch_not_mediated_row_validates():
         assert arm["tip_pins"] == {"pep": None, "supply_gate": None, "joint": None}
     assert index["claim_cite"]["lineage"] == "1d0f380"
     assert len(_V0_THREAT_IDS) == 28
+
+
+def test_host_benign_twins_stay_existence_proofs():
+    index = _load(INDEX_PATH)
+    assert index["runner_implemented"] is False
+    assert index["measured_attack_success_claimed"] is False
+    assert index["claim_cite"]["lineage"] == "1d0f380"
+    assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+    rows = index["rows"]
+    by_id = {row["threat_id"]: row for row in rows}
+    deny_reasons: set[str] = set()
+    deny_classes: set[str] = set()
+    host_denies = []
+    for row in rows:
+        notes = row["notes"]
+        assert _RULE_ERROR not in notes
+        decision = row["taxonomy"]["mapped_receipt_decision"]
+        if decision == "DENY":
+            deny_reasons.update(row["taxonomy"]["reason_codes"])
+            deny_classes.add(row["taxonomy"]["class_id"])
+            assert "allowed" not in row["taxonomy"]["reason_codes"]
+        host = row["arms"]["host-PEP-alone"]
+        if host["status"] == "mapped" and host["decision"] == "DENY":
+            host_denies.append(row)
+            assert _POLICY_INTENT in notes
+            if row["threat_id"] in _BENIGN_TWINS.values():
+                assert "This DENY is not a rule-error." in notes
+            else:
+                assert "No benign twin:" in notes
+
+    assert deny_reasons == _DENY_REASON_CODES
+    assert "allowed" not in deny_reasons
+    assert "allow_catalog_bound" not in deny_classes
+    assert len(host_denies) == 14
+
+    twins = [row for row in rows if row["threat_id"] in _BENIGN_TWINS]
+    assert [row["threat_id"] for row in twins] == list(_BENIGN_TWINS)
+    targets = []
+    for row in twins:
+        target_id = _BENIGN_TWINS[row["threat_id"]]
+        target = by_id[target_id]
+        targets.append(target_id)
+        assert row["benign_twin_of"] == target_id
+        assert row["schema_version"] == "measured-corpus-row-v1"
+        assert row["existence_proof_only"] is True
+        assert row["no_asr_claim"] is True
+        assert row["plane"] == "host"
+        assert row["table_id"] is None
+        for name in _COUNTERS:
+            assert row[name] is None
+        assert row["taxonomy"]["family"] == "pep_deny"
+        assert row["taxonomy"]["class_id"] == "allow_catalog_bound"
+        assert row["taxonomy"]["mapped_receipt_decision"] == "ALLOW"
+        assert row["taxonomy"]["reason_codes"] == ["allowed"]
+        assert "Not a recorded rule-error denial." in row["notes"]
+        assert _POLICY_INTENT not in row["notes"]
+        host = row["arms"]["host-PEP-alone"]
+        assert host["status"] == "mapped"
+        assert host["decision"] == "ALLOW"
+        assert host["residual_asr"] is None
+        assert host["tip_pins"]["pep"] == PEP_SHA
+        assert host["tip_pins"]["supply_gate"] is None
+        assert row["arms"]["monitor-alone"]["status"] == "stub"
+        assert row["arms"]["monitor-alone"]["decision"] is None
+        assert row["arms"]["stack"]["status"] == "not_applicable"
+        assert row["arms"]["stack"]["decision"] is None
+        assert len(row["fixtures"]) == 1
+        fixture = row["fixtures"][0]
+        assert fixture["role"] == "pep_corpus"
+        assert fixture["git_sha"] == PEP_SHA
+        assert fixture["path"].startswith("eval/corpus/allow_")
+        assert target["arms"]["host-PEP-alone"]["decision"] == "DENY"
+        assert row["threat_id"] in target["notes"]
+    assert len(set(targets)) == 3
