@@ -74,7 +74,9 @@ Cyber card C4 is the adopted Lab ASR rule (Cyber §4 CLEAN / Glenn decision), re
 
 ### `benign_twin_of`
 
-Optional. Type string or JSON `null`. The string is a `threat_id`: the same pattern `^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$`. It is a pointer to the attack row this benign row twins. JSON `null` if this row is not a benign twin. This delta does not add benign-twin rows.
+Optional. Type string or JSON `null`. The string is a `threat_id`: the same pattern `^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$`. It is a pointer to the attack row this benign row twins. JSON `null` if this row is not a benign twin.
+
+The seed index has three such rows, one per pinned pep ALLOW fixture where ALLOW is the intended decision for a host DENY: `allow_catalog_bound`, `allow_approval_bound`, and `allow_approval_state_bound`. There is no denial-label field. A host mapped DENY records the label in `notes` as `Denial label: policy-intent.` That means the pinned DENY is the rule's intended outcome. `Denial label: rule-error.` would mean a false deny of a benign case. No seed row uses that sentence. The benign twins are not denials: their pinned receipt is ALLOW (`reason_code` `allowed`, the existing pep ALLOW receipt). `attempted_benign` and `blocked_benign` are JSON `null` because `existence_proof_only` is true and `runner_implemented` is false. Null is not a measured count and not an ASR.
 
 ### Counters
 

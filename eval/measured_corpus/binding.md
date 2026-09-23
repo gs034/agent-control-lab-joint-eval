@@ -30,7 +30,7 @@ Live row-schema v1 words only.
 | `joint` | The row has a `joint_story` fixture. Stack is the two-gate existence-proof. |
 | `complementarity` | Monitor-versus-gate. Noul taxonomy slots, and `representation_mismatch`. |
 
-`ALLOW` is in the decision vocabulary because a mapped arm may carry it. No current seed arm does. The supply pin-and-verify fixture records `ALLOW` on `taxonomy.mapped_receipt_decision` only. Its arms stay `not_applicable` with a null decision.
+`ALLOW` is in the decision vocabulary because a mapped arm may carry it. The three benign twins use it on `host-PEP-alone`. The supply pin-and-verify fixture records `ALLOW` on `taxonomy.mapped_receipt_decision` only. Its arms stay `not_applicable` with a null decision.
 
 ## Patterns
 
@@ -42,13 +42,14 @@ Live row-schema v1 words only.
 | Supply class with a joint story | `joint` | `stub` | `not_applicable` | `mapped` / `DENY` |
 | Noul taxonomy slot | `complementarity` | `stub` | `not_applicable` | `not_applicable` |
 | Threat-model class mapped to a pep corpus row | `host` | `stub` | `mapped` / `DENY` | `not_applicable` |
+| Benign twin of a host DENY | `host` | `stub` | `mapped` / `ALLOW` | `not_applicable` |
 | `representation_mismatch` | `complementarity` | `not_mediated` | `not_mediated` | `not_mediated` |
 
-The 28 v0 seed bodies are unchanged. Decisions on those rows stay the existence-proof values already in the seed. This table does not add a DENY reason.
+Decisions on the 28 v0 rows stay the existence-proof values already in the seed. Host DENY notes add `Denial label: policy-intent.` This table does not add a DENY reason.
 
 ## `representation_mismatch` example
 
-`acl-mc-representation-mismatch-001` is the one v1 seed row. A monitor or caller-side representation of an action is not the structured envelope the host gate evaluates. The pep and the supply gate do not compare those representations, so the gate does not mediate this threat.
+`acl-mc-representation-mismatch-001` is a v1 row. The three benign twins are separate v1 rows. A monitor or caller-side representation of an action is not the structured envelope the host gate evaluates. The pep and the supply gate do not compare those representations, so the gate does not mediate this threat.
 
 Structured mismatches the PEP does mediate stay on their own rows: args substitution is `acl-mc-pep-approval-binding-001`, and state-digest substitution is `acl-mc-tm-approve-then-mutate-001`. Both remain mapped `DENY`. This row is neither of those classes.
 
