@@ -42,14 +42,14 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
-| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `6f5c0451168dc9c25244a56789433e6ca1b53d87` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `78cf6be05d5a1024c9b3a6179fcd55bf8c35847a` |
+| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `938769656e7cb311d1953dee9df22b79275e6c09` |
 
 Equivalent pip form:
 
 ```text
-agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@6f5c0451168dc9c25244a56789433e6ca1b53d87
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@78cf6be05d5a1024c9b3a6179fcd55bf8c35847a
+agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@2a104ca02b7359e0e54c4eb0f7e2978fbf2d1d3a
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@938769656e7cb311d1953dee9df22b79275e6c09
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
