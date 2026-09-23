@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Agent Control Lab contributors
-"""Offline self-check for the measured-corpus v0 schema and seed map.
+"""Offline self-check for the measured-corpus schema and seed map.
 
 Does not call pep, supply_gate, or a runner. The subset checker covers only
-the JSON Schema keywords this contract uses, including oneOf and a sibling-file
-$ref. $ref is resolved against the schema file's retrieval URI (and against
-$id when a schema sets one). const uses JSON type equality, so booleans are
-not numbers.
+the JSON Schema keywords this contract uses, including oneOf, if/then, minimum,
+and a sibling-file $ref. $ref is resolved against the schema file's retrieval
+URI (and against $id when a schema sets one). const uses JSON type equality,
+so booleans are not numbers. JSON integers are not booleans.
 """
 
 from __future__ import annotations
@@ -44,8 +44,13 @@ _KEYWORDS = frozenset(
         "items",
         "$ref",
         "oneOf",
+        "if",
+        "then",
+        "else",
+        "minimum",
     }
 )
+_COUNTERS = ("attempted", "reached_tool", "attempted_benign", "blocked_benign")
 _ARMS = ("monitor-alone", "host-PEP-alone", "stack")
 _PEP_CORPUS_DENY_IDS = frozenset(
     {
@@ -92,6 +97,10 @@ def _type_name(instance: Any) -> str:
         return "null"
     if isinstance(instance, bool):
         return "boolean"
+    if isinstance(instance, int):
+        return "integer"
+    if isinstance(instance, float):
+        return "number"
     if isinstance(instance, str):
         return "string"
     if isinstance(instance, list):
@@ -223,6 +232,23 @@ def _validate(
         return errors
     if "oneOf" in schema:
         errors.extend(_one_of(instance, schema["oneOf"], root, path, base, doc_uri))
+    if "if" in schema:
+        condition = schema["if"]
+        if not isinstance(condition, dict):
+            errors.append(f"{path}: if must be an object")
+        else:
+            matched = not _validate(
+                instance, condition, root, f"{path}<if>", base, doc_uri
+            )
+            branch_key = "then" if matched else "else"
+            branch = schema.get(branch_key)
+            if branch is not None:
+                if not isinstance(branch, dict):
+                    errors.append(f"{path}: {branch_key} must be an object")
+                else:
+                    errors.extend(
+                        _validate(instance, branch, root, path, base, doc_uri)
+                    )
     if instance is None:
         return errors
     kind = _type_name(instance)
@@ -248,6 +274,9 @@ def _validate(
             errors.append(f"{path}: shorter than {schema['minLength']}")
         if "pattern" in schema and re.fullmatch(schema["pattern"], instance) is None:
             errors.append(f"{path}: {instance!r} does not match {schema['pattern']}")
+    if kind in {"integer", "number"}:
+        if "minimum" in schema and instance < schema["minimum"]:
+            errors.append(f"{path}: expected >= {schema['minimum']}")
     if kind == "array":
         if "minItems" in schema and len(instance) < schema["minItems"]:
             errors.append(f"{path}: expected at least {schema['minItems']} items")
@@ -310,20 +339,52 @@ def test_v0_claim_bar_arms_and_asr_slot_are_frozen():
     assert defs["not_applicable_outcome"]["properties"]["residual_asr"] == {
         "$ref": "#/$defs/residual_asr"
     }
+    assert defs["not_mediated_outcome"]["properties"]["status"]["const"] == "not_mediated"
+    assert defs["not_mediated_outcome"]["properties"]["decision"]["const"] is None
+    assert defs["not_mediated_outcome"]["properties"]["tip_pins"] == {"$ref": "#/$defs/tip_pins"}
+    assert defs["not_mediated_outcome"]["properties"]["residual_asr"] == {
+        "$ref": "#/$defs/residual_asr"
+    }
+    assert defs["count_or_null"]["type"] == ["integer", "null"]
+    assert defs["count_or_null"]["minimum"] == 0
+    mediated = {"$ref": "#/$defs/not_mediated_outcome"}
     assert arms["properties"]["monitor-alone"]["oneOf"] == [
         {"$ref": "#/$defs/stub_outcome"},
         {"$ref": "#/$defs/not_applicable_outcome"},
+        mediated,
     ]
     assert arms["properties"]["host-PEP-alone"]["oneOf"] == [
         {"$ref": "#/$defs/host_pep_mapped_outcome"},
         {"$ref": "#/$defs/not_applicable_outcome"},
+        mediated,
     ]
     assert arms["properties"]["stack"]["oneOf"] == [
         {"$ref": "#/$defs/stack_mapped_outcome"},
         {"$ref": "#/$defs/not_applicable_outcome"},
+        mediated,
     ]
     assert row_schema["$defs"]["decision_or_null"]["enum"] == ["DENY", "ALLOW", None]
-    assert row_schema["properties"]["existence_proof_only"]["const"] is True
+    assert row_schema["properties"]["schema_version"]["enum"] == [
+        "measured-corpus-row-v0",
+        "measured-corpus-row-v1",
+    ]
+    assert row_schema["properties"]["existence_proof_only"]["type"] == "boolean"
+    assert row_schema["if"]["properties"]["existence_proof_only"]["const"] is True
+    for name in _COUNTERS:
+        assert row_schema["properties"][name] == {"$ref": "#/$defs/count_or_null"}
+        assert row_schema["then"]["properties"][name] == {"type": "null"}
+    assert row_schema["properties"]["benign_twin_of"]["type"] == ["string", "null"]
+    assert row_schema["properties"]["benign_twin_of"]["pattern"] == row_schema["properties"][
+        "threat_id"
+    ]["pattern"]
+    assert row_schema["properties"]["table_id"]["type"] == ["string", "null"]
+    assert row_schema["properties"]["plane"]["enum"] == [
+        "host",
+        "supply",
+        "joint",
+        "complementarity",
+        None,
+    ]
     assert row_schema["properties"]["no_asr_claim"]["const"] is True
     assert row_schema["properties"]["brand"]["const"] == "Agent Control Lab"
     assert index_schema["properties"]["runner_implemented"]["const"] is False
@@ -351,6 +412,11 @@ def test_seed_index_and_rows_match_schema():
     assert len(ids) == len(set(ids))
     for row in rows:
         _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+        assert row["schema_version"] == "measured-corpus-row-v0"
+        assert row["existence_proof_only"] is True
+        assert row["no_asr_claim"] is True
+        for name in ("benign_twin_of", "table_id", "plane", *_COUNTERS):
+            assert name not in row
 
 
 def _outcome(
@@ -397,9 +463,12 @@ def test_index_schema_enforces_row_contract_arm_order_and_status_decision():
 
     valid_cases = (
         ("monitor-alone", _outcome("not_applicable", None)),
+        ("monitor-alone", _outcome("not_mediated", None)),
         ("host-PEP-alone", _outcome("mapped", "ALLOW", pep=PEP_SHA)),
+        ("host-PEP-alone", _outcome("not_mediated", None)),
         ("stack", _outcome("mapped", "ALLOW", pep=PEP_SHA, supply_gate=SUPPLY_GATE_SHA)),
         ("stack", _outcome("not_applicable", None)),
+        ("stack", _outcome("not_mediated", None)),
         ("host-PEP-alone", _outcome("not_applicable", None)),
     )
     for arm, outcome in valid_cases:
@@ -415,6 +484,9 @@ def test_index_schema_enforces_row_contract_arm_order_and_status_decision():
         ("host-PEP-alone", _outcome("stub", None)),
         ("monitor-alone", _outcome("mapped", "DENY")),
         ("monitor-alone", _outcome("stub", "ALLOW")),
+        ("monitor-alone", _outcome("not_mediated", "DENY")),
+        ("host-PEP-alone", _outcome("not_mediated", "ALLOW")),
+        ("stack", _outcome("not_mediated", "DENY")),
     )
     for arm, outcome in invalid_cases:
         errors = errors_for(_with_first_arm(index, arm, outcome))
@@ -494,7 +566,9 @@ def test_const_comparison_rejects_numeric_boolean_aliases():
     row = copy.deepcopy(index["rows"][0])
     row["existence_proof_only"] = 1
     errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
-    assert any("existence_proof_only" in error and "const" in error for error in errors), errors
+    assert any(
+        "existence_proof_only" in error and "boolean" in error for error in errors
+    ), errors
     row["existence_proof_only"] = True
     row["no_asr_claim"] = 0
     errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
@@ -602,3 +676,128 @@ def test_fixture_pointers_do_not_vendor_sibling_trees():
                 assert fixture["git_sha"] is None
                 path = ROOT / rel
                 assert path.exists(), rel
+
+
+def _v1_row(index: dict[str, Any], *, schema_version: str = "measured-corpus-row-v1") -> dict[str, Any]:
+    row = copy.deepcopy(index["rows"][0])
+    row["schema_version"] = schema_version
+    row["arms"]["host-PEP-alone"] = _outcome("not_mediated", None)
+    row["arms"]["stack"] = _outcome("not_mediated", None)
+    row["benign_twin_of"] = None
+    row["table_id"] = None
+    row["plane"] = None
+    for name in _COUNTERS:
+        row[name] = None
+    return row
+
+
+def test_v1_not_mediated_row_validates():
+    index = _load(INDEX_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    index_schema = _load(INDEX_SCHEMA_PATH)
+    for schema_version in ("measured-corpus-row-v0", "measured-corpus-row-v1"):
+        row = _v1_row(index, schema_version=schema_version)
+        for arm in _ARMS:
+            assert row["arms"][arm]["decision"] is None
+            assert row["arms"][arm]["residual_asr"] is None
+        assert row["arms"]["monitor-alone"]["status"] == "stub"
+        assert row["arms"]["host-PEP-alone"]["status"] == "not_mediated"
+        assert row["arms"]["stack"]["status"] == "not_mediated"
+        _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+        cloned = copy.deepcopy(index)
+        cloned["rows"][0] = row
+        _assert_valid(cloned, index_schema, INDEX_SCHEMA_PATH)
+
+    denied = _v1_row(index)
+    denied["arms"]["host-PEP-alone"]["decision"] = "DENY"
+    errors = _validate(denied, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+    assert any("oneOf" in error and "host-PEP-alone" in error for error in errors), errors
+
+
+def test_v1_existence_proof_rejects_non_null_counters():
+    index = _load(INDEX_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    index_schema = _load(INDEX_SCHEMA_PATH)
+    base_row = _v1_row(index)
+    assert base_row["existence_proof_only"] is True
+    _assert_valid(base_row, row_schema, ROW_SCHEMA_PATH)
+
+    for name in _COUNTERS:
+        row = copy.deepcopy(base_row)
+        row[name] = 1
+        errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+        assert errors, name
+        assert any(error.startswith(f"$.{name}") for error in errors), errors
+        cloned = copy.deepcopy(index)
+        cloned["rows"][0] = row
+        index_errors = _validate(cloned, index_schema, index_schema, "$", INDEX_SCHEMA_PATH)
+        assert any(
+            error.startswith(f"$.rows[0].{name}") for error in index_errors
+        ), index_errors
+
+    measured = copy.deepcopy(base_row)
+    measured["existence_proof_only"] = False
+    measured["attempted"] = 4
+    measured["reached_tool"] = 1
+    measured["attempted_benign"] = 4
+    measured["blocked_benign"] = 0
+    assert measured["no_asr_claim"] is True
+    for arm in measured["arms"].values():
+        assert arm["residual_asr"] is None
+    _assert_valid(measured, row_schema, ROW_SCHEMA_PATH)
+
+    measured["existence_proof_only"] = True
+    errors = _validate(measured, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+    assert errors
+    assert any(error.startswith("$.attempted") for error in errors), errors
+
+    for bad in (-1, True, 1.5, "1"):
+        rejected = copy.deepcopy(measured)
+        rejected["existence_proof_only"] = False
+        rejected["attempted"] = bad
+        errors = _validate(rejected, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+        assert errors, bad
+        assert any(error.startswith("$.attempted") for error in errors), errors
+
+
+def test_v1_benign_twin_of_round_trips():
+    index = _load(INDEX_PATH)
+    row_schema = _load(ROW_SCHEMA_PATH)
+    attack_id = index["rows"][0]["threat_id"]
+    row = _v1_row(index)
+    row["threat_id"] = "acl-mc-benign-prose-as-policy-001"
+    row["benign_twin_of"] = attack_id
+    row["plane"] = "host"
+    row["table_id"] = "acl-table-not-recorded"
+    _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+    restored = json.loads(json.dumps(row))
+    _assert_valid(restored, row_schema, ROW_SCHEMA_PATH)
+    assert restored["benign_twin_of"] == attack_id
+    assert restored["plane"] == "host"
+    assert restored["table_id"] == "acl-table-not-recorded"
+    assert restored["schema_version"] == "measured-corpus-row-v1"
+
+    row["benign_twin_of"] = None
+    row["plane"] = None
+    row["table_id"] = None
+    _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+    restored = json.loads(json.dumps(row))
+    assert restored["benign_twin_of"] is None
+    assert restored["plane"] is None
+    assert restored["table_id"] is None
+    _assert_valid(restored, row_schema, ROW_SCHEMA_PATH)
+
+    for plane in ("supply", "joint", "complementarity"):
+        row["plane"] = plane
+        _assert_valid(row, row_schema, ROW_SCHEMA_PATH)
+    row["plane"] = "pep"
+    errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+    assert any("plane" in error for error in errors), errors
+    row["plane"] = "host"
+    row["benign_twin_of"] = "not-a-threat-id"
+    errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+    assert any("benign_twin_of" in error for error in errors), errors
+    row["benign_twin_of"] = attack_id
+    row["table_id"] = ""
+    errors = _validate(row, row_schema, row_schema, "$", ROW_SCHEMA_PATH)
+    assert any("table_id" in error for error in errors), errors

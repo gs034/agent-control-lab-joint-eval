@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$comment": "No absolute $id. Load this checked-out file so its retrieval URI is the base. Do not set $id to a GitHub HTML URL.",
-  "title": "Agent Control Lab measured-corpus row (v0)",
-  "description": "Contract for one threat a future three-arm runner may load. Arms are monitor-alone, host-PEP-alone, and stack. residual_asr is a null placeholder, not a filled rate. mapped requires decision DENY or ALLOW. stub and not_applicable require decision null. stub is valid only on monitor-alone. host-PEP-alone mapped requires tip_pins.pep. stack mapped requires tip_pins.pep and tip_pins.supply_gate. joint may be null. stub and not_applicable may leave pins null. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 until a measured table and Cyber PASS.",
+  "title": "Agent Control Lab measured-corpus row (v1 delta)",
+  "description": "Contract for one threat a future three-arm runner may load. Arms are monitor-alone, host-PEP-alone, and stack. schema_version measured-corpus-row-v0 and measured-corpus-row-v1 are both valid; v0 seed bodies stay valid. v1 adds arm status not_mediated (decision null) and optional benign_twin_of, table_id, plane, and counters attempted, reached_tool, attempted_benign, blocked_benign. When existence_proof_only is true, every counter is null or absent. residual_asr is a null placeholder, not a filled rate. mapped requires decision DENY or ALLOW. stub, not_applicable, and not_mediated require decision null. stub is valid only on monitor-alone. host-PEP-alone mapped requires tip_pins.pep. stack mapped requires tip_pins.pep and tip_pins.supply_gate. joint may be null. stub, not_applicable, and not_mediated may leave pins null. Brand: Agent Control Lab. Licence: Apache-2.0. Public/EOI claim cite stays pep diligence tip 1d0f380 until a measured table and Cyber PASS.",
   "type": "object",
   "additionalProperties": false,
   "$defs": {
@@ -43,11 +43,16 @@
       }
     },
     "residual_asr": {
-      "description": "Nullable slot only. v0 accepts JSON null and no other value. Null means N/A. It is not a measured attack-success rate.",
+      "description": "Nullable slot only. This delta accepts JSON null and no other value. Null means N/A. It is not a measured attack-success rate.",
       "type": "null"
     },
+    "count_or_null": {
+      "description": "Trial count slot. JSON null, or an integer >= 0. Not an attack-success rate. When existence_proof_only is true the if/then below requires null.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
     "tip_pins": {
-      "description": "stub and not_applicable may leave every sibling pin null.",
+      "description": "stub, not_applicable, and not_mediated may leave every sibling pin null.",
       "type": "object",
       "additionalProperties": false,
       "required": ["pep", "supply_gate", "joint"],
@@ -126,6 +131,33 @@
         "residual_asr": { "$ref": "#/$defs/residual_asr" },
         "tip_pins": { "$ref": "#/$defs/tip_pins" }
       }
+    },
+    "not_mediated_outcome": {
+      "description": "Coverage / honesty outcome for a threat this gate does not mediate. decision is null. residual_asr is null. Pins may be null. Valid on every arm. Not a measured rate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision", "residual_asr", "tip_pins"],
+      "properties": {
+        "status": { "const": "not_mediated" },
+        "decision": { "const": null },
+        "residual_asr": { "$ref": "#/$defs/residual_asr" },
+        "tip_pins": { "$ref": "#/$defs/tip_pins" }
+      }
+    }
+  },
+  "if": {
+    "description": "existence_proof_only rows cannot carry trial counts.",
+    "properties": {
+      "existence_proof_only": { "const": true }
+    },
+    "required": ["existence_proof_only"]
+  },
+  "then": {
+    "properties": {
+      "attempted": { "type": "null" },
+      "reached_tool": { "type": "null" },
+      "attempted_benign": { "type": "null" },
+      "blocked_benign": { "type": "null" }
     }
   },
   "required": [
@@ -146,7 +178,10 @@
       "type": "string",
       "pattern": "^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
-    "schema_version": { "const": "measured-corpus-row-v0" },
+    "schema_version": {
+      "description": "v0 seed rows keep measured-corpus-row-v0. measured-corpus-row-v1 is the same contract plus the optional fields below.",
+      "enum": ["measured-corpus-row-v0", "measured-corpus-row-v1"]
+    },
     "setup": { "type": "string", "minLength": 1 },
     "expected_effect": { "type": "string", "minLength": 1 },
     "taxonomy": {
@@ -181,32 +216,56 @@
       "required": ["monitor-alone", "host-PEP-alone", "stack"],
       "properties": {
         "monitor-alone": {
-          "description": "stub or not_applicable, with a null decision.",
+          "description": "stub, not_applicable, or not_mediated, with a null decision.",
           "oneOf": [
             { "$ref": "#/$defs/stub_outcome" },
-            { "$ref": "#/$defs/not_applicable_outcome" }
+            { "$ref": "#/$defs/not_applicable_outcome" },
+            { "$ref": "#/$defs/not_mediated_outcome" }
           ]
         },
         "host-PEP-alone": {
-          "description": "mapped (DENY or ALLOW, with tip_pins.pep) or not_applicable (null decision, pins may be null). stub is not valid.",
+          "description": "mapped (DENY or ALLOW, with tip_pins.pep), not_applicable, or not_mediated (null decision, pins may be null). stub is not valid.",
           "oneOf": [
             { "$ref": "#/$defs/host_pep_mapped_outcome" },
-            { "$ref": "#/$defs/not_applicable_outcome" }
+            { "$ref": "#/$defs/not_applicable_outcome" },
+            { "$ref": "#/$defs/not_mediated_outcome" }
           ]
         },
         "stack": {
-          "description": "mapped (DENY or ALLOW, with tip_pins.pep and tip_pins.supply_gate) or not_applicable (null decision, pins may be null). stub is not valid.",
+          "description": "mapped (DENY or ALLOW, with tip_pins.pep and tip_pins.supply_gate), not_applicable, or not_mediated (null decision, pins may be null). stub is not valid.",
           "oneOf": [
             { "$ref": "#/$defs/stack_mapped_outcome" },
-            { "$ref": "#/$defs/not_applicable_outcome" }
+            { "$ref": "#/$defs/not_applicable_outcome" },
+            { "$ref": "#/$defs/not_mediated_outcome" }
           ]
         }
       }
     },
-    "existence_proof_only": { "const": true },
+    "existence_proof_only": {
+      "description": "Boolean. Seed rows stay true. When true, attempted, reached_tool, attempted_benign, and blocked_benign must each be JSON null if present.",
+      "type": "boolean"
+    },
     "no_asr_claim": { "const": true },
     "brand": { "const": "Agent Control Lab" },
     "licence": { "const": "Apache-2.0" },
+    "benign_twin_of": {
+      "description": "Optional pointer to the attack row this benign row twins (threat_id). JSON null if this row is not a benign twin. Same pattern as threat_id.",
+      "type": ["string", "null"],
+      "pattern": "^acl-mc-[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "attempted": { "$ref": "#/$defs/count_or_null" },
+    "reached_tool": { "$ref": "#/$defs/count_or_null" },
+    "attempted_benign": { "$ref": "#/$defs/count_or_null" },
+    "blocked_benign": { "$ref": "#/$defs/count_or_null" },
+    "table_id": {
+      "description": "Optional measured-table id. JSON null when no table is recorded. This delta stores no table.",
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "plane": {
+      "description": "Optional Lab plane for this row. host covers the pep/runtime gate, supply the supply gate, joint the two-gate story, complementarity the monitor-versus-gate distinction. Not the joint_story step labels. JSON null when unset.",
+      "enum": ["host", "supply", "joint", "complementarity", null]
+    },
     "notes": { "type": "string", "minLength": 1 }
   }
 }
