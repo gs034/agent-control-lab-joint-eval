@@ -5,7 +5,10 @@
 Runs one shared envelope twice on each Lab arm (control-off, then
 control-on) and writes provisional attack-success counts. This is not a
 residual ASR, not a letters ASR, and not a Cyber C4 table. ``table_id``
-stays null. The public/EOI claim cite stays pep diligence tip ``1d0f380``.
+and ``residual_asr`` stay null. ``table_id_candidate`` and
+``b7_prereg_hash`` are provisional addresses of the frozen B7 note.
+Soft is not EngClear. EngClear is not a C4 table mint. The public/EOI
+claim cite stays pep diligence tip ``1d0f380``.
 
 ``runner_implemented`` is true on this runner's document only. The
 measured-corpus seed keeps ``runner_implemented`` false. This module does
@@ -49,6 +52,7 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
+from joint_eval.b7_table_id import provisional_table_id
 from joint_eval.loader import dumps_canonical, load_object, repo_root
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA, pin_document
 from joint_eval.story import (
@@ -68,6 +72,7 @@ LABEL = (
 )
 CLAIM_LINEAGE = "1d0f380"
 CLAIM_LINEAGE_SHA = "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+PAIRED_SCHEMA_VERSION = "acl-paired-existence-v1"
 CORPUS_INDEX = Path("eval") / "measured_corpus" / "index.json"
 
 ARM_ORDER = ("monitor", "PEP", "stack")
@@ -142,6 +147,7 @@ def run_paired(
         row_source=row_source,
         fixture_row_count=len(rows),
         ok=ok,
+        root=base,
     )
     return document
 
@@ -161,6 +167,9 @@ def format_summary(document: Mapping[str, Any]) -> str:
         "measured attack success claimed: false",
         "residual_asr: null",
         "table_id: null (pending Cyber C4)",
+        f"table_id_candidate: {document['table_id_candidate']}",
+        f"b7_prereg_hash: {document['b7_prereg_hash']}",
+        document["status_separation"],
         "control arena setting: false",
         "inspect loop: false",
     ]
@@ -262,14 +271,16 @@ def _document(
     row_source: str,
     fixture_row_count: int,
     ok: bool,
+    root: Path,
 ) -> dict[str, Any]:
     cite = index["claim_cite"]
+    candidate = provisional_table_id(root=root, schema_version=PAIRED_SCHEMA_VERSION)
     return {
         "brand": BRAND,
         "licence": LICENCE,
         "kind": "paired_existence_provisional_counts",
         "label": LABEL,
-        "schema_version": "acl-paired-existence-v1",
+        "schema_version": PAIRED_SCHEMA_VERSION,
         "runner": "joint_eval.paired_runner",
         "runner_implemented": RUNNER_IMPLEMENTED,
         "measured_corpus_runner_implemented": False,
@@ -277,6 +288,11 @@ def _document(
         "residual_asr": None,
         "letters_asr": False,
         "table_id": None,
+        "table_id_candidate": candidate["table_id_candidate"],
+        "b7_prereg_hash": candidate["b7_prereg_hash"],
+        "b7_artefact_id": candidate["b7_artefact_id"],
+        "table_id_candidate_preimage": candidate["table_id_candidate_preimage"],
+        "status_separation": candidate["status_separation"],
         "cyber_c4_pending": True,
         "existence_proof_only": True,
         "counts_are": "one_authored_fixture_each_not_a_trial_sample",
