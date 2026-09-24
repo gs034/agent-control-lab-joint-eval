@@ -44,7 +44,7 @@ Pointers name sibling paths and joint_story paths. Sibling trees are not copied.
 
 Public/EOI claim cite stays pep diligence tip **`1d0f380`** (`1d0f3809a4a16d4a6ac3524b287cf719f192e1f9`) until there is a measured table and Cyber PASS.
 
-This seed does not lift that bar. Every seed row keeps `existence_proof_only` and `no_asr_claim` true. `residual_asr` cannot hold a number in this schema. `runner_implemented` and `measured_attack_success_claimed` are frozen `false`.
+This seed does not lift that bar. Every seed row keeps `existence_proof_only` and `no_asr_claim` true. `residual_asr` cannot hold a number in this schema. `runner_implemented` and `measured_attack_success_claimed` are frozen `false`. `python -m joint_eval.paired_runner` sets `runner_implemented` true only on its own document (provisional paired counts, `table_id` null). It does not change this seed flag.
 
 Install pins in `joint_eval/pins.py` are how this harness installs packages. A row may copy those SHAs into `tip_pins` when an arm is mapped to that package. `tip_pins.joint` is `null` in v0. After this contract is on the joint repo tip, a later diligence note may record that tip. Recording it does not change the `1d0f380` claim cite.
 

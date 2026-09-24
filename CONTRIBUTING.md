@@ -31,6 +31,7 @@ Plugin4Shell-class is a threat-pattern name used in the supply-gate package. It 
 python -m pip install -e ".[dev]"
 python -m joint_eval.demo
 python -m joint_eval.control_arena_export --out /tmp/acl-control-arena-export
+python -m joint_eval.paired_runner --out /tmp/acl-paired.json
 pytest
 bash scripts/check_lab_only.sh
 python3 scripts/lab_brand_wall.py
