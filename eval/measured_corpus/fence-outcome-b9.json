@@ -1,0 +1,257 @@
+{
+  "brand": "Agent Control Lab",
+  "licence": "Apache-2.0",
+  "artefact": "ACL_Artefact_Mapping_Tables_B9",
+  "kind": "late_effect_fence_outcome_mapping_stub",
+  "pattern_cite": "arXiv:2609.21284",
+  "pattern_cite_url": "https://arxiv.org/abs/2609.21284",
+  "pattern_only": true,
+  "paper_17_of_17_claimed": false,
+  "conformance_claim": false,
+  "slsa_claim": false,
+  "kernel_fence_claim": false,
+  "new_deny_class": false,
+  "table_id": null,
+  "residual_asr": null,
+  "letters_asr": false,
+  "claim_cite": {
+    "lineage": "1d0f380",
+    "lineage_sha": "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
+  },
+  "pep_repo": "https://github.com/gs034/agent-control-lab-pep",
+  "pep_pin": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
+  "label_vocabulary": ["covered", "not_applicable_by_design"],
+  "registered_outcome_vocabulary": [
+    {
+      "id": "cancellation_acknowledgement_only",
+      "scenario_group": "Cancellation acknowledgement only",
+      "registered_outcome": "baseline false-stop"
+    },
+    {
+      "id": "root_cut_without_sink_fence",
+      "scenario_group": "Root cut without sink fence",
+      "registered_outcome": "Not-Quiescent"
+    },
+    {
+      "id": "root_cut_and_sink_fence",
+      "scenario_group": "Root cut and sink fence",
+      "registered_outcome": "Quiescent"
+    },
+    {
+      "id": "restart_and_stale_process",
+      "scenario_group": "Restart and stale-process interleaving",
+      "registered_outcome": "Quiescent"
+    },
+    {
+      "id": "alternate_root_rebind",
+      "scenario_group": "Alternate-root rebind",
+      "registered_outcome": "Quiescent"
+    },
+    {
+      "id": "opaque_endpoint_missing_fence",
+      "scenario_group": "Opaque endpoint / missing fence",
+      "registered_outcome": "Indeterminate"
+    },
+    {
+      "id": "typed_pre_fence_commitments",
+      "scenario_group": "Typed pre-fence commitments",
+      "registered_outcome": "Quiescent"
+    },
+    {
+      "id": "open_obligation_in_flight_token",
+      "scenario_group": "Open obligation / in-flight token",
+      "registered_outcome": "Not-Quiescent"
+    },
+    {
+      "id": "exact_retry_body_conflict_remint",
+      "scenario_group": "Exact retry / body conflict / remint",
+      "registered_outcome": "replay safe"
+    },
+    {
+      "id": "conjunctive_witness_enforcement",
+      "scenario_group": "Conjunctive witness enforcement",
+      "registered_outcome": "rejected"
+    },
+    {
+      "id": "ghost_leaf_token",
+      "scenario_group": "Ghost leaf token",
+      "registered_outcome": "rejected"
+    },
+    {
+      "id": "terminal_channel_reopen",
+      "scenario_group": "Terminal channel reopen",
+      "registered_outcome": "rejected"
+    }
+  ],
+  "rows": [
+    {
+      "row_id": "lab-late-effect-fence",
+      "kind": "lab_fence_fixture",
+      "source_id": "acl-pep-eval-late-effect-fence-001",
+      "repo": "https://github.com/gs034/agent-control-lab-pep",
+      "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
+      "path": "eval/corpus/late_effect_fence/",
+      "lab_reason_code": "late_effect_fence",
+      "lab_receipt": "DENY",
+      "vocabulary_id": "root_cut_and_sink_fence",
+      "label": "covered",
+      "notes": "Existence analogue only. A pre-cut admission completed after kill() is DENY late_effect_fence and does not enter the tool. The suite group name is a pattern cite. This row does not emit Quiescent and does not add a DENY class."
+    },
+    {
+      "row_id": "lab-kill-active",
+      "kind": "lab_fence_fixture",
+      "source_id": "acl-pep-eval-kill-001",
+      "repo": "https://github.com/gs034/agent-control-lab-pep",
+      "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
+      "path": "eval/corpus/kill/",
+      "lab_reason_code": "kill_active",
+      "lab_receipt": "DENY",
+      "vocabulary_id": "root_cut_without_sink_fence",
+      "label": "not_applicable_by_design",
+      "notes": "The corpus kill row is a fresh evaluate while killed: DENY kill_active. The suite group is Not-Quiescent because an already scheduled effect stays admissible on a cut-only arm. Lab kill() is a cut plus fence. That cut-only arm is not implemented. No new DENY class."
+    },
+    {
+      "row_id": "lab-admission-consumed",
+      "kind": "lab_fence_fixture",
+      "source_id": "pep-test-admission-consumed",
+      "repo": "https://github.com/gs034/agent-control-lab-pep",
+      "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
+      "path": "tests/test_late_effect_fence.py",
+      "lab_reason_code": "admission_consumed",
+      "lab_receipt": "DENY",
+      "vocabulary_id": "terminal_channel_reopen",
+      "label": "not_applicable_by_design",
+      "notes": "A second complete on the same admission is DENY admission_consumed. That reason already exists on pep. There is no corpus directory; the existence refs are test_second_complete_denies_and_enters_at_most_once and test_replay_while_tool_is_running_does_not_enter_again at this pin. That one-shot permit is not the suite's terminal channel reopen. No new DENY class."
+    },
+    {
+      "row_id": "lab-suspend-active",
+      "kind": "lab_fence_fixture",
+      "source_id": "acl-pep-eval-suspend-001",
+      "repo": "https://github.com/gs034/agent-control-lab-pep",
+      "git_sha": "ffd048a228dd2c8193418db6bebbab7cd339cd08",
+      "path": "eval/corpus/suspend/",
+      "lab_reason_code": "suspend_active",
+      "lab_receipt": "DENY",
+      "vocabulary_id": null,
+      "label": "not_applicable_by_design",
+      "notes": "Related kill/suspend corpus row. DENY suspend_active is a Lab mode. It is not a registered suite outcome. No new DENY class."
+    },
+    {
+      "row_id": "suite-cancellation-acknowledgement-only",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "cancellation_acknowledgement_only",
+      "label": "not_applicable_by_design",
+      "notes": "A cancellation acknowledgement is not a Lab fence. Lab does not treat it as closure."
+    },
+    {
+      "row_id": "suite-restart-and-stale-process",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "restart_and_stale_process",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not emit a Quiescent certificate after restart. A reloaded kill stays kill_active. No cross-process cut certificate."
+    },
+    {
+      "row_id": "suite-alternate-root-rebind",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "alternate_root_rebind",
+      "label": "not_applicable_by_design",
+      "notes": "Lab has no alternate-root rebind and no multi-root support algebra."
+    },
+    {
+      "row_id": "suite-opaque-endpoint-missing-fence",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "opaque_endpoint_missing_fence",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not emit Indeterminate. A missing fence on pep is not this suite outcome."
+    },
+    {
+      "row_id": "suite-typed-pre-fence-commitments",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "typed_pre_fence_commitments",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not account dual pre-fence admissions with post-barrier receipts."
+    },
+    {
+      "row_id": "suite-open-obligation-in-flight-token",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "open_obligation_in_flight_token",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not track open obligations or in-flight channel tokens."
+    },
+    {
+      "row_id": "suite-exact-retry-body-conflict-remint",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "exact_retry_body_conflict_remint",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not implement certificate retry, body conflict, or remint rejection."
+    },
+    {
+      "row_id": "suite-conjunctive-witness-enforcement",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "conjunctive_witness_enforcement",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not enforce conjunctive support witnesses."
+    },
+    {
+      "row_id": "suite-ghost-leaf-token",
+      "kind": "registered_outcome",
+      "source_id": null,
+      "repo": null,
+      "git_sha": null,
+      "path": null,
+      "lab_reason_code": null,
+      "lab_receipt": null,
+      "vocabulary_id": "ghost_leaf_token",
+      "label": "not_applicable_by_design",
+      "notes": "Lab does not reject unregistered leaf tokens. No kernel fence."
+    }
+  ]
+}
