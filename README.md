@@ -37,6 +37,22 @@ python3 scripts/lab_brand_wall.py
 
 `python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md).
 
+`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
+
+```bash
+python -m joint_eval.paired_runner --out /tmp/acl-paired.json
+```
+
+That command uses the in-tree joint-story fixtures when sibling checkouts are unset. The 28 measured-corpus rows that have fixtures (the shared set in the 20–50 range) need pinned checkouts, not vendored trees:
+
+```bash
+export ACL_PEP_ROOT=/path/to/agent-control-lab-pep
+export ACL_SUPPLY_GATE_ROOT=/path/to/agent-control-lab-supply-gate
+python -m joint_eval.paired_runner --out /tmp/acl-paired.json
+```
+
+`ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A short summary goes to stdout.
+
 `python -m joint_eval.demo` prints the joint story document (pins, DENY receipts, coverage limits) and exits 0 only when every step DENY’d without invoke.
 
 ## Pin / install (no vendoring)
@@ -82,7 +98,7 @@ See [`docs/coverage-limits.md`](docs/coverage-limits.md), [`docs/threat-model.md
 
 | Path | Role |
 | --- | --- |
-| `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo`, ControlArena directory export |
+| `joint_eval/` | Harness: pins, story runner, `python -m joint_eval.demo`, paired runner, ControlArena directory export |
 | `docs/control-arena-export.md` | Directory export from fixtures and receipts. Not a setting. No ASR |
 | `eval/joint_story/` | Joint fixtures + frozen expected receipts |
 | `eval/measured_corpus/` | Row schema (v1 delta; v0 seed rows still valid) + seed map. Not a runner |
