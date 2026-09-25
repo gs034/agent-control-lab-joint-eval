@@ -24,7 +24,7 @@ Public/EOI claim cite stays pep diligence tip **`1d0f380`** (`1d0f3809a4a16d4a6a
 | Role | SHA |
 | --- | --- |
 | pep install pin | `ffd048a228dd2c8193418db6bebbab7cd339cd08` |
-| supply-gate install pin | `dca0aeb4d7bc8f6f02cd461842275ac655768022` |
+| supply-gate install pin | `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8` |
 | claim cite | `1d0f3809a4a16d4a6ac3524b287cf719f192e1f9` |
 
 Paired-runner schema version bound into `table_id_candidate`: `acl-paired-existence-v1`.

@@ -28,7 +28,7 @@ Vendoring sibling trees would duplicate policy code, drift from upstream SHAs, a
 Pinned SHAs at acceptance:
 
 - pep: `ffd048a228dd2c8193418db6bebbab7cd339cd08`
-- supply-gate: `dca0aeb4d7bc8f6f02cd461842275ac655768022`
+- supply-gate: `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8`
 
 ## Consequences
 
