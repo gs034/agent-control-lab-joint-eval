@@ -1255,7 +1255,7 @@ def test_b10_rug_pull_two_envelope_and_unchanged_pin_twin():
     assert index["claim_cite"]["lineage"] == "1d0f380"
     assert index["claim_cite"]["lineage_sha"] == "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
     assert binding["claim_cite_lineage"] == "1d0f380"
-    assert SUPPLY_GATE_SHA == "938769656e7cb311d1953dee9df22b79275e6c09"
+    assert SUPPLY_GATE_SHA == "f99b41d98f14c1e2cd66b6549e98dbc97c181ce8"
     rows = index["rows"]
     assert len(rows) == _INDEX_ROW_MAX
     row = next(item for item in rows if item["threat_id"] == _B10_THREAT_ID)

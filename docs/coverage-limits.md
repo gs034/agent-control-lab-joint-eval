@@ -12,7 +12,7 @@ This harness is an **existence-proof**. Brand: Agent Control Lab. Apache-2.0.
   - rug-pull two-envelope supply (pinned ALLOW, then `head_mismatch` DENY). Existence proof only. The unchanged-pin runtime case is `not_mediated`, not a DENY.
 - Frozen receipts for those rows (PEP `timestamp` compared semantically, not as identity).
 - A standalone ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) written from those fixtures and frozen receipts. See [`control-arena-export.md`](control-arena-export.md).
-- A paired control-off / control-on runner (`python -m joint_eval.paired_runner`) over monitor, PEP, and stack. Output is paired existence / provisional attack-success counts. `table_id` is null pending Cyber C4. Not a residual ASR.
+- A paired control-off / control-on runner (`python -m joint_eval.paired_runner`) over monitor, PEP, and stack. Output is paired existence / provisional attack-success counts. `table_id` is null pending Cyber C4. `table_id_candidate` and `b7_prereg_hash` name the frozen B7 note. Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. Not a residual ASR.
 - Pinned sibling SHAs via git install (no vendored `pep/` or `supply_gate/` trees).
 - Fail-closed demo and tests.
 
