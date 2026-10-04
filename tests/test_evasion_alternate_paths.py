@@ -14,8 +14,14 @@ measured-corpus row ``acl-mc-pep-official-deny-001`` maps to DENY
 callable that counts tool entry. Each outcome is classified as one of:
 
 - ``DENY:<reason_code>``: the PEP refused and the probe was not entered;
-- ``ALLOW``: the PEP admitted an envelope that carries the prohibited intent.
-  This is a fail-open finding, and those tests end ``_is_not_mediated_residual``;
+- ``ALLOW``: the PEP admitted an allowlisted call that carries the prohibited
+  intent as argument data. The PEP mediates tool identity, capability and the
+  args schema, not what an allowed tool later does with its arguments, so
+  these are not-mediated residuals rather than a break of the PEP's own
+  contract. Those tests end ``_is_not_mediated_residual``. The two
+  unparsed-key cases (extra ``invoke`` key, unknown ``schema_fields`` key) are
+  closer to a contract gap, because keys are dropped before an args schema with
+  ``additionalProperties: false`` is applied;
 - ``not_mediated``: the effect never reaches the PEP as an envelope.
 
 Observed on pep ``ffd048a``:
