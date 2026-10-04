@@ -22,6 +22,8 @@ This harness is an **existence-proof**. Brand: Agent Control Lab. Apache-2.0.
 - Not a ControlArena setting and not an Inspect eval loop. The export writer does not import those packages.
 - **Not a monitor replacement.** Monitors may still observe; they are not allow authorities here.
 - Not the full pep `eval/corpus/` matrix and not the full supply-gate adapter/update-policy matrix.
+- **Not mediation of alternate paths.** The pinned PEP ALLOWs allowlisted calls that carry a prohibited operation as argument data: base64-encoded in `argv`, split across two allowed calls, or nested inside an allowed envelope. Whether the effect happens depends on what the allowed tool does with its arguments, which the PEP does not mediate. Unknown keys under `invoke` or `schema_fields` in the Lab envelope shape are dropped before the args schema is applied. It never sees a follow-on stdin payload (`not_mediated`). A second tool name and identical retries are DENY. See [`tests/test_evasion_alternate_paths.py`](../tests/test_evasion_alternate_paths.py). These are existence-proof fixtures from arXiv:2609.30217 strategy classes, not a measured ASR.
+- **No measurement-validity fields yet.** Rows carry no injection locator, argument-level success predicate or paired outcome. See [`measurement-validity.md`](measurement-validity.md) for the proposal, which awaits a schema decision.
 - Not production enforcement, multi-tenant SaaS, marketplace install, or live git-host checkout.
 - Not an LLM / CoT / transcript judge on evaluate or deny.
 - Not a claim that pinning git SHAs replaces post-checkout verify in production hosts (the supply-gate still requires observed HEAD).
