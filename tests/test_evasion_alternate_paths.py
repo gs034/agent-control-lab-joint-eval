@@ -25,7 +25,7 @@ callable that counts tool entry. Each outcome is classified as one of:
 - ``not_mediated``: the effect never reaches the PEP as an envelope.
 
 Observed on pep ``76c6d4b``. The host attests ``lab.demo.agent`` on every
-call (pep ADR-0002, ADR-0003):
+strategy call (pep ADR-0002, ADR-0003):
 
 1. Encoded argument: ``ALLOW``. ``argv`` items are not inspected.
 2. Decomposition: ``ALLOW`` on both calls. Evaluate is per-envelope and keeps
@@ -321,11 +321,10 @@ def test_capability_detail_hides_token_state_from_non_holder():
     holder_guess = _gate(_envelope(ALLOWED_TOOL, capability=guess))
     holder_expired = _gate(_envelope(ALLOWED_TOOL, capability=expired))
 
-    for token, observed in outsider.items():
+    for observed in outsider.values():
         _assert_deny(observed, "capability_missing")
         detail = observed["receipt"]["reason_detail"]
         assert detail == UNIFORM_CAPABILITY_DETAIL
-        assert token not in detail and OTHER_PRINCIPAL not in detail
     _assert_deny(holder_guess, "capability_missing")
     assert holder_guess["receipt"]["reason_detail"] == UNIFORM_CAPABILITY_DETAIL
     _assert_deny(holder_expired, "capability_missing")

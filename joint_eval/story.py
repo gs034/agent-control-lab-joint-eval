@@ -262,13 +262,16 @@ def _pep_runtime(folder: Path, pep_runtime_cls: type, pep_approval_store: type) 
         frozen_args = grant.get("args")
         if not isinstance(frozen_args, Mapping):
             raise JointEvalError("approval fixture must freeze args")
+        principal = grant.get("principal")
+        if not isinstance(principal, str):
+            raise JointEvalError("approval fixture must bind a principal")
         runtime.issue_approval(
             tool_name=str(grant.get("tool_name")),
             args=frozen_args,
             ttl_seconds=int(grant["ttl_seconds"]),
             approval_id=str(grant["approval_id"]),
             now=issued_at,
-            principal=grant.get("principal"),
+            principal=principal,
         )
     return runtime
 

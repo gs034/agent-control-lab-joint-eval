@@ -10,9 +10,9 @@ from pathlib import Path
 
 from joint_eval.b7_table_id import (
     ARTEFACT_ID,
-    HISTORICAL_ARTEFACT_IDS,
     CLAIM_LINEAGE,
     CLAIM_LINEAGE_SHA,
+    HISTORICAL_ARTEFACT_IDS,
     STATUS_SEPARATION,
     provisional_table_id,
 )

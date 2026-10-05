@@ -40,7 +40,7 @@ The v1 pep install pin was `ffd048a` (pep 0.3.3). v2 pins pep `76c6d4b` (pep 0.5
 
 The stub policy moves from `0.1.0-stub` to `0.2.0-stub`.
 
-The joint fixtures and tests now attest `lab.demo.agent` for PEP calls. Their DENY classes are unchanged. The two joint_story PEP receipts change `policy_version` and `envelope_hash`, because the fixture envelope metadata records the policy version.
+The joint story's approval-binding step and the evasion tests attest `lab.demo.agent`. The prose-bypass step and the official row attest no principal, because both deny before the PEP reads one. Their DENY classes are unchanged. The two joint_story PEP receipts change `policy_version` and `envelope_hash`, because the fixture envelope metadata records the policy version.
 
 v2 is a new seal, not an edit of v1. Its `b7_prereg_hash` and `table_id_candidate` therefore differ from v1's.
 
