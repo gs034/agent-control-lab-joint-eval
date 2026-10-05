@@ -13,8 +13,9 @@ PEP_SHA = "76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9"
 PEP_PACKAGE = "agent-control-lab-pep"
 
 SUPPLY_GATE_REPO = "https://github.com/gs034/agent-control-lab-supply-gate"
-# Install pin. Post–Option C supply-gate tip (B6 measured-corpus loader, PR #9). Not the claim cite.
-SUPPLY_GATE_SHA = "f99b41d98f14c1e2cd66b6549e98dbc97c181ce8"
+# Install pin (B7 v3): the B6 measured-corpus loader plus the brand-wall
+# email keep-out commit. Not the claim cite.
+SUPPLY_GATE_SHA = "7044a313dffc60e08b26366950328f9025c56310"
 SUPPLY_GATE_PACKAGE = "agent-control-lab-supply-gate"
 
 

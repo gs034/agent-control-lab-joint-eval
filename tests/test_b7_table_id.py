@@ -82,15 +82,26 @@ def test_paired_document_keeps_table_id_and_residual_asr_null() -> None:
     assert "residual_asr: null" in summary
 
 
-def test_b7_v1_seal_is_retained_byte_identical() -> None:
-    """v2 supersedes v1; v1 stays as the historical 2026-09-23 seal."""
-    (v1_id,) = HISTORICAL_ARTEFACT_IDS
-    v1 = ROOT / "docs" / f"{v1_id}.md"
-    raw = v1.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == (
-        "580ba16a32a95e3340ec470cdc252406e285be704744d7eaa9821dbab32da187"
-    )
-    assert b"ffd048a228dd2c8193418db6bebbab7cd339cd08" in raw
-    v2 = NOTE.read_text(encoding="utf-8")
-    assert v1_id in v2
-    assert "ffd048a" in v2
+HISTORICAL_SEALS = {
+    "ACL_JointEval_Preregistration_Limitations_B7_2026-09-23": (
+        "580ba16a32a95e3340ec470cdc252406e285be704744d7eaa9821dbab32da187",
+        b"| pep install pin | `ffd048a228dd2c8193418db6bebbab7cd339cd08` |",
+    ),
+    "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05": (
+        "3b6b70b798562937f465e52a85065edf96da5b319219893032d9e5b3bd72aaaa",
+        b"| supply-gate install pin | `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8` |",
+    ),
+}
+
+
+def test_earlier_b7_seals_are_retained_byte_identical() -> None:
+    """v3 supersedes v2, which superseded v1; both stay as historical seals."""
+    assert set(HISTORICAL_ARTEFACT_IDS) == set(HISTORICAL_SEALS)
+    current = NOTE.read_text(encoding="utf-8")
+    for artefact_id, (sha256, pin_row) in HISTORICAL_SEALS.items():
+        raw = (ROOT / "docs" / f"{artefact_id}.md").read_bytes()
+        assert hashlib.sha256(raw).hexdigest() == sha256
+        assert pin_row in raw
+        assert artefact_id in current
+    assert f"| supply-gate install pin | `{SUPPLY_GATE_SHA}` |" in current
+    assert f"| pep install pin | `{PEP_SHA}` |" in current
