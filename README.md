@@ -37,7 +37,7 @@ python3 scripts/lab_brand_wall.py
 
 `python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md).
 
-`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7_2026-09-23.md`](docs/ACL_JointEval_Preregistration_Limitations_B7_2026-09-23.md)). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
+`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
 
 ```bash
 python -m joint_eval.paired_runner --out /tmp/acl-paired.json
@@ -62,13 +62,13 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
 | `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `7044a313dffc60e08b26366950328f9025c56310` |
 
 Equivalent pip form:
 
 ```text
 agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@f99b41d98f14c1e2cd66b6549e98dbc97c181ce8
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@7044a313dffc60e08b26366950328f9025c56310
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
