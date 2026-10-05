@@ -60,6 +60,7 @@ from joint_eval.story import (
     JointEvalError,
     _import_pep,
     _import_supply,
+    _pep_principal,
     _pep_runtime,
 )
 
@@ -569,7 +570,9 @@ def _pep_joint(folder: Path, pep_api: tuple[Any, Any, Any, Any]) -> dict[str, An
     del _evaluate
     envelope = load_object(folder / "envelope.json")
     runtime = _pep_runtime(folder, runtime_cls, approval_store)
-    return _gated_pep(envelope, runtime, gated, path="pep.gated_invoke")
+    return _gated_pep(
+        envelope, runtime, gated, path="pep.gated_invoke", principal=_pep_principal(folder)
+    )
 
 
 def _pep_official(envelope_path: Path, pep_api: tuple[Any, Any, Any, Any]) -> dict[str, Any]:
@@ -579,14 +582,21 @@ def _pep_official(envelope_path: Path, pep_api: tuple[Any, Any, Any, Any]) -> di
     return _gated_pep(envelope, runtime_cls(), gated, path="pep.gated_invoke")
 
 
-def _gated_pep(envelope: Mapping[str, Any], runtime: Any, gated: Any, *, path: str) -> dict[str, Any]:
+def _gated_pep(
+    envelope: Mapping[str, Any],
+    runtime: Any,
+    gated: Any,
+    *,
+    path: str,
+    principal: str | None = None,
+) -> dict[str, Any]:
     invoked = {"n": 0}
 
     def _probe() -> str:
         invoked["n"] += 1
         return "INVOKED"
 
-    decision, _result = gated(envelope, _probe, runtime=runtime, now=CLOCK)
+    decision, _result = gated(envelope, _probe, runtime=runtime, now=CLOCK, principal=principal)
     return {
         "decision": _verdict(decision),
         "invoked": invoked["n"] > 0,

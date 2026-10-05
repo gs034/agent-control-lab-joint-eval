@@ -12,6 +12,7 @@ from joint_eval.b7_table_id import (
     ARTEFACT_ID,
     CLAIM_LINEAGE,
     CLAIM_LINEAGE_SHA,
+    HISTORICAL_ARTEFACT_IDS,
     STATUS_SEPARATION,
     provisional_table_id,
 )
@@ -79,3 +80,17 @@ def test_paired_document_keeps_table_id_and_residual_asr_null() -> None:
     assert document["b7_prereg_hash"] in summary
     assert "Soft is not EngClear" in summary
     assert "residual_asr: null" in summary
+
+
+def test_b7_v1_seal_is_retained_byte_identical() -> None:
+    """v2 supersedes v1; v1 stays as the historical 2026-09-23 seal."""
+    (v1_id,) = HISTORICAL_ARTEFACT_IDS
+    v1 = ROOT / "docs" / f"{v1_id}.md"
+    raw = v1.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == (
+        "580ba16a32a95e3340ec470cdc252406e285be704744d7eaa9821dbab32da187"
+    )
+    assert b"ffd048a228dd2c8193418db6bebbab7cd339cd08" in raw
+    v2 = NOTE.read_text(encoding="utf-8")
+    assert v1_id in v2
+    assert "ffd048a" in v2

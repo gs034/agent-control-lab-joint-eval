@@ -24,7 +24,8 @@ callable that counts tool entry. Each outcome is classified as one of:
   ``additionalProperties: false`` is applied;
 - ``not_mediated``: the effect never reaches the PEP as an envelope.
 
-Observed on pep ``ffd048a``:
+Observed on pep ``76c6d4b``. The host attests ``lab.demo.agent`` on every
+strategy call (pep ADR-0002, ADR-0003):
 
 1. Encoded argument: ``ALLOW``. ``argv`` items are not inspected.
 2. Decomposition: ``ALLOW`` on both calls. Evaluate is per-envelope and keeps
@@ -44,11 +45,12 @@ Observed on pep ``ffd048a``:
 
 Deny details. The strategy denials echo only the caller-supplied
 ``tool_name``, never the allowlist, capability ids, args schema, or policy
-digest. Observation outside the five strategies: on an allowlisted tool the
-``capability_missing`` detail differs by token state ("capability token
-unknown" versus "capability token expired"). That tells a caller which
-guessed token ids exist in policy, so it echoes policy contents beyond the
-reason code. ``test_capability_detail_reveals_token_state_observation`` pins it.
+digest. Outside the five strategies, pep ``ffd048a`` let any caller tell a
+guessed token id that exists in policy from one that does not ("capability
+token unknown" versus "capability token expired"). Since pep ADR-0003 a
+caller who is not a listed holder gets one detail for both, and only the
+holder sees token state. ``test_capability_detail_hides_token_state_from_non_holder``
+pins that.
 """
 
 from __future__ import annotations
@@ -72,6 +74,9 @@ ALLOWED_TOOL = "echo.ping"
 ALLOWED_CAPABILITY = "lab.cap.echo.demo"
 OFFICIAL_ROW = "acl-mc-pep-official-deny-001"
 OFFICIAL_REASON = "TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY"
+HOST_PRINCIPAL = "lab.demo.agent"
+OTHER_PRINCIPAL = "lab.other.agent"
+UNIFORM_CAPABILITY_DETAIL = "capability token not valid for this caller"
 
 
 def _envelope(
@@ -80,6 +85,7 @@ def _envelope(
     *,
     capability: str | None = None,
     eval_id: str = "acl-evasion-001",
+    identity: str = HOST_PRINCIPAL,
     extra_invoke: Mapping[str, Any] | None = None,
     extra_schema: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -94,7 +100,7 @@ def _envelope(
     invoke: dict[str, Any] = {"argv": list(argv or []), "schema_fields": schema_fields, "tool_name": tool_name}
     invoke.update(extra_invoke or {})
     return {
-        "caller": {"identity": "lab.demo.agent", "trust_domain": "model+monitor+mcp"},
+        "caller": {"identity": identity, "trust_domain": "model+monitor+mcp"},
         "envelope_version": "1.0",
         "invoke": invoke,
         "pep_eval_id": eval_id,
@@ -103,14 +109,21 @@ def _envelope(
     }
 
 
-def _gate(envelope: Mapping[str, Any], runtime: PepRuntime | None = None) -> dict[str, Any]:
+def _gate(
+    envelope: Mapping[str, Any],
+    runtime: PepRuntime | None = None,
+    *,
+    principal: str = HOST_PRINCIPAL,
+) -> dict[str, Any]:
     entered = {"n": 0}
 
     def _probe() -> str:
         entered["n"] += 1
         return "INVOKED"
 
-    decision, result = gated_invoke(envelope, _probe, runtime=runtime or PepRuntime(), now=CLOCK)
+    decision, result = gated_invoke(
+        envelope, _probe, runtime=runtime or PepRuntime(), now=CLOCK, principal=principal
+    )
     receipt = decision.to_dict()
     verdict = str(decision.verdict)
     return {
@@ -240,7 +253,9 @@ def test_interactive_stdin_payload_is_not_mediated():
     session = _InteractiveSession()
     opening = _envelope(ALLOWED_TOOL, ["--interactive"], capability=ALLOWED_CAPABILITY)
 
-    decision, opened = gated_invoke(opening, lambda: session, runtime=PepRuntime(), now=CLOCK)
+    decision, opened = gated_invoke(
+        opening, lambda: session, runtime=PepRuntime(), now=CLOCK, principal=HOST_PRINCIPAL
+    )
     receipts.append(decision.to_dict())
     assert decision.verdict == "ALLOW"
     assert opened is session
@@ -287,18 +302,30 @@ def test_strategy_deny_details_do_not_echo_policy():
             assert secret not in detail
 
 
-def test_capability_detail_reveals_token_state_observation():
-    """Observation, not a pass: details differ by whether a guessed token exists.
+def test_capability_detail_hides_token_state_from_non_holder():
+    """A non-holder cannot tell a guessed token id from a lapsed policy record.
 
-    Both are ``capability_missing``. The detail says ``unknown`` for an id
-    absent from policy and ``expired`` for one present but lapsed, so it
-    confirms that ``lab.cap.echo.expired`` is a policy record. If the pinned
-    PEP stops distinguishing these, this test fails and should be updated.
+    pep ``ffd048a`` answered "capability token unknown" for an id absent from
+    policy and "capability token expired" for ``lab.cap.echo.expired``, which
+    confirmed the record existed. Under pep ADR-0003 both are one detail for a
+    caller the token does not list; the listed holder still sees the expiry.
     """
-    unknown = _gate(_envelope(ALLOWED_TOOL, capability="lab.cap.guess"))
-    expired = _gate(_envelope(ALLOWED_TOOL, capability="lab.cap.echo.expired"))
+    guess = "lab.cap.guess"
+    expired = "lab.cap.echo.expired"
+    outsider = {
+        token: _gate(
+            _envelope(ALLOWED_TOOL, capability=token, identity=OTHER_PRINCIPAL), principal=OTHER_PRINCIPAL
+        )
+        for token in (guess, expired)
+    }
+    holder_guess = _gate(_envelope(ALLOWED_TOOL, capability=guess))
+    holder_expired = _gate(_envelope(ALLOWED_TOOL, capability=expired))
 
-    _assert_deny(unknown, "capability_missing")
-    _assert_deny(expired, "capability_missing")
-    assert unknown["receipt"]["reason_detail"] == "capability token unknown"
-    assert expired["receipt"]["reason_detail"] == "capability token expired"
+    for observed in outsider.values():
+        _assert_deny(observed, "capability_missing")
+        detail = observed["receipt"]["reason_detail"]
+        assert detail == UNIFORM_CAPABILITY_DETAIL
+    _assert_deny(holder_guess, "capability_missing")
+    assert holder_guess["receipt"]["reason_detail"] == UNIFORM_CAPABILITY_DETAIL
+    _assert_deny(holder_expired, "capability_missing")
+    assert holder_expired["receipt"]["reason_detail"] == "capability token expired"

@@ -17,7 +17,10 @@ from typing import Any
 from joint_eval.loader import repo_root
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
 
-ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7_2026-09-23"
+ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05"
+# v1 stays in docs/ byte-identical as the historical 2026-09-23 seal (pep pin
+# ffd048a). It is not read for the candidate; it is kept and pinned by tests.
+HISTORICAL_ARTEFACT_IDS = ("ACL_JointEval_Preregistration_Limitations_B7_2026-09-23",)
 RELATIVE_PATH = Path("docs") / f"{ARTEFACT_ID}.md"
 CLAIM_LINEAGE = "1d0f380"
 CLAIM_LINEAGE_SHA = "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
