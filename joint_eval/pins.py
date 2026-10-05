@@ -9,7 +9,7 @@ This harness does not vendor pep or supply-gate source trees.
 from __future__ import annotations
 
 PEP_REPO = "https://github.com/gs034/agent-control-lab-pep"
-PEP_SHA = "ffd048a228dd2c8193418db6bebbab7cd339cd08"
+PEP_SHA = "76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9"
 PEP_PACKAGE = "agent-control-lab-pep"
 
 SUPPLY_GATE_REPO = "https://github.com/gs034/agent-control-lab-supply-gate"

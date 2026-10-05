@@ -214,6 +214,7 @@ def _run_row(
             _must_not_run,
             runtime=runtime,
             now=CLOCK,
+            principal=_pep_principal(folder),
         )
         live = decision_obj.to_dict()
         decision = str(decision_obj.verdict)
@@ -267,8 +268,20 @@ def _pep_runtime(folder: Path, pep_runtime_cls: type, pep_approval_store: type) 
             ttl_seconds=int(grant["ttl_seconds"]),
             approval_id=str(grant["approval_id"]),
             now=issued_at,
+            principal=grant.get("principal"),
         )
     return runtime
+
+
+def _pep_principal(folder: Path) -> str | None:
+    """Principal the fixture host attests for a pep step (pep ADR-0002/ADR-0003)."""
+    runtime_path = folder / RUNTIME_NAME
+    if not runtime_path.is_file():
+        return None
+    principal = load_object(runtime_path).get("principal")
+    if principal is not None and not isinstance(principal, str):
+        raise JointEvalError("runtime principal must be a string")
+    return principal
 
 
 def _optional_clock(value: Any) -> datetime | None:
