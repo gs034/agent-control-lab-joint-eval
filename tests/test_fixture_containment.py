@@ -585,6 +585,35 @@ def test_fallback_directory_open_tolerates_eacces_and_leaves_files(
     assert sorted(p.name for p in out.iterdir()) == ["a.json", "b.json"]
 
 
+@pytest.mark.skipif(not POSIX or not hasattr(os, "O_DIRECTORY"), reason="fallback directory open")
+@pytest.mark.parametrize("code_name", ["EACCES", "EPERM"])
+def test_fallback_directory_open_warns_when_permission_skips_fsync(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    code_name: str,
+) -> None:
+    import errno
+    import logging
+
+    from joint_eval import safe_write
+
+    code = getattr(errno, code_name)
+    out = tmp_path / "ok"
+    _force_fallback_directory_open(monkeypatch, code)
+    with caplog.at_level(logging.WARNING, logger="joint_eval.safe_write"):
+        with safe_write.output_directory(out) as output:
+            output.replace("a.json", "1")
+    assert (out / "a.json").read_text(encoding="utf-8") == "1"
+    records = [record for record in caplog.records if record.name == "joint_eval.safe_write"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    message = records[0].getMessage()
+    assert "directory fsync skipped" in message
+    assert str(out) in message
+    assert code_name in message
+
+
 def test_replace_all_leaves_the_previous_set_untouched_when_a_body_write_fails(tmp_path: Path) -> None:
     from joint_eval import safe_write
 
