@@ -30,9 +30,12 @@ from joint_eval.loader import (
     OBSERVED_HEAD_NAME,
     PROSE_NAME,
     RUNTIME_NAME,
+    FixturePathError,
+    contained_dir,
     dumps_canonical,
     load_index,
     load_object,
+    read_fixture_text,
     story_dir,
 )
 from joint_eval.pins import pin_document
@@ -88,18 +91,21 @@ def run_joint_story(*, root: Path | None = None) -> JointStoryResult:
     for raw in rows:
         if not isinstance(raw, Mapping):
             raise JointEvalError("joint story row must be a JSON object")
-        steps.append(
-            _run_row(
-                base,
-                raw,
-                pep_runtime_cls=pep_runtime_cls,
-                pep_gated=pep_gated,
-                pep_approval_store=pep_approval_store,
-                supply_evaluate=supply_evaluate,
-                supply_verdict=supply_verdict,
-                supply_origins=supply_origins,
+        try:
+            steps.append(
+                _run_row(
+                    base,
+                    raw,
+                    pep_runtime_cls=pep_runtime_cls,
+                    pep_gated=pep_gated,
+                    pep_approval_store=pep_approval_store,
+                    supply_evaluate=supply_evaluate,
+                    supply_verdict=supply_verdict,
+                    supply_origins=supply_origins,
+                )
             )
-        )
+        except FixturePathError as exc:
+            raise JointEvalError(f"fixture refused: {exc}") from exc
 
     ok = all(step.ok for step in steps) and bool(steps)
     document = {
@@ -167,8 +173,10 @@ def _run_row(
     plane = str(raw["plane"])
     threat_class = str(raw["threat_class"])
     expected_decision = str(raw["expected_decision"])
-    rel = str(raw["dir"])
-    folder = base / rel
+    try:
+        folder = contained_dir(base, raw.get("dir"))
+    except FixturePathError as exc:
+        raise JointEvalError(f"{step_id}: {exc}") from exc
     if (folder / "sequence.json").is_file():
         return _run_supply_sequence(
             step_id=step_id,
@@ -189,7 +197,7 @@ def _run_row(
     if plane == "supply-gate":
         observed = _load_observed_head(folder / OBSERVED_HEAD_NAME)
         prose_path = folder / PROSE_NAME
-        prose = prose_path.read_text(encoding="utf-8") if prose_path.is_file() else None
+        prose = read_fixture_text(prose_path) if prose_path.is_file() else None
         decision_obj = supply_evaluate(
             envelope,
             observed,
@@ -356,12 +364,15 @@ def _run_supply_sequence(
             raise JointEvalError(
                 f"{step_id}: envelope {index + 1} expected_decision must be {expected_env}"
             )
-        sub = folder / env_dir
+        try:
+            sub = contained_dir(folder, env_dir)
+        except FixturePathError as exc:
+            raise JointEvalError(f"{step_id}: {exc}") from exc
         envelope = load_object(sub / ENVELOPE_NAME)
         expected = load_object(sub / EXPECTED_NAME)
         observed = _load_observed_head(sub / OBSERVED_HEAD_NAME)
         prose_path = sub / PROSE_NAME
-        prose = prose_path.read_text(encoding="utf-8") if prose_path.is_file() else None
+        prose = read_fixture_text(prose_path) if prose_path.is_file() else None
         decision_obj = supply_evaluate(
             envelope,
             observed,

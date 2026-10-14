@@ -18,6 +18,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import secrets
+import stat
 import sys
 from pathlib import Path
 from typing import Any, Mapping
@@ -28,9 +31,12 @@ from joint_eval.loader import (
     OBSERVED_HEAD_NAME,
     PROSE_NAME,
     RUNTIME_NAME,
+    FixturePathError,
+    contained_dir,
     dumps_canonical,
     load_index,
     load_object,
+    read_fixture_text,
     story_dir,
 )
 
@@ -99,7 +105,10 @@ def build_control_arena_export(*, root: Path | None = None) -> dict[str, Any]:
     for raw in rows:
         if not isinstance(raw, Mapping):
             raise ControlArenaExportError("joint story row must be a JSON object")
-        loaded.append(_load_row(base, raw))
+        try:
+            loaded.append(_load_row(base, raw))
+        except FixturePathError as exc:
+            raise ControlArenaExportError(f"fixture refused: {exc}") from exc
 
     tools = _tool_catalogue(loaded)
     trajectories = tuple(
@@ -130,21 +139,27 @@ def write_control_arena_export(
     """Write ``trajectory.jsonl``, ``tools.json``, and ``metadata.json``."""
     document = build_control_arena_export(root=root)
     output = Path(output_dir)
-    if output.exists() and not output.is_dir():
+    if output.is_symlink() or (output.exists() and not output.is_dir()):
         raise ControlArenaExportError(f"output path is not a directory: {output}")
     output.mkdir(parents=True, exist_ok=True)
-    (output / TOOLS_NAME).write_text(dumps_canonical(document["tools"]), encoding="utf-8")
+    _require_own_directory(output)
     lines = [
         json.dumps(row, sort_keys=True, ensure_ascii=False) for row in document["trajectories"]
     ]
     text = "\n".join(lines)
     if text:
         text += "\n"
-    (output / TRAJECTORY_NAME).write_text(text, encoding="utf-8")
-    (output / METADATA_NAME).write_text(
-        dumps_canonical(document["metadata"]),
-        encoding="utf-8",
+    outputs = (
+        (TOOLS_NAME, dumps_canonical(document["tools"])),
+        (TRAJECTORY_NAME, text),
+        (METADATA_NAME, dumps_canonical(document["metadata"])),
     )
+    for name, _body in outputs:
+        target = output / name
+        if target.is_symlink() or (target.exists() and not target.is_file()):
+            raise ControlArenaExportError(f"output entry is not a regular file: {target}")
+    for name, body in outputs:
+        _replace_file(output, name, body)
     return document
 
 
@@ -227,12 +242,48 @@ def _load_row(base: Path, raw: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _require_own_directory(output: Path) -> None:
+    """Refuse an output directory another user owns or anyone can write.
+
+    A pre-created directory at a predictable path (``/tmp/...``) is how a
+    second local user would plant links at the output names.
+    """
+    if not hasattr(os, "geteuid"):
+        return
+    info = output.lstat()
+    if not stat.S_ISDIR(info.st_mode):
+        raise ControlArenaExportError(f"output path is not a directory: {output}")
+    if info.st_uid != os.geteuid():
+        raise ControlArenaExportError(f"output directory is owned by another user: {output}")
+    if stat.S_IMODE(info.st_mode) & stat.S_IWOTH:
+        raise ControlArenaExportError(f"output directory is world-writable: {output}")
+
+
+def _replace_file(output: Path, name: str, body: str) -> None:
+    """Write ``body`` to a fresh file, then rename it over ``name``. Never opens through a link."""
+    temporary = output / f".{name}.{secrets.token_hex(8)}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    flags |= getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
+    fd = os.open(temporary, flags, 0o644)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(body)
+        os.replace(temporary, output / name)
+    except BaseException:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+
+
 def _within(base: Path, rel: str) -> Path:
-    root = base.resolve()
-    folder = (root / rel).resolve()
-    if folder != root and root not in folder.parents:
-        raise ControlArenaExportError(f"fixture path escapes the joint story directory: {rel}")
-    return folder
+    try:
+        return contained_dir(base, rel)
+    except FixturePathError as exc:
+        raise ControlArenaExportError(
+            f"fixture path escapes the joint story directory: {rel} ({exc})"
+        ) from exc
 
 
 def _load_sequence(step_id: str, folder: Path) -> tuple[dict[str, Any], ...]:
@@ -252,7 +303,7 @@ def _load_sequence(step_id: str, folder: Path) -> tuple[dict[str, Any], ...]:
         events.append(
             _load_event(
                 step_id,
-                folder / env_dir,
+                _within(folder, env_dir),
                 expected,
                 event_id=str(item.get("id") or env_dir),
             )
@@ -279,7 +330,7 @@ def _load_event(
             f"!= expected {expected_decision!r}"
         )
     prose_path = folder / PROSE_NAME
-    prose = prose_path.read_text(encoding="utf-8") if prose_path.is_file() else None
+    prose = read_fixture_text(prose_path) if prose_path.is_file() else None
     runtime = load_object(folder / RUNTIME_NAME) if (folder / RUNTIME_NAME).is_file() else None
     return {
         "id": event_id,

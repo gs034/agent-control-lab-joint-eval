@@ -30,12 +30,12 @@ Requires Python 3.11+. Network is needed once to install the pinned sibling pack
 ```bash
 python -m pip install -e ".[dev]"
 python -m joint_eval.demo
-python -m joint_eval.control_arena_export --out /tmp/acl-control-arena-export
+python -m joint_eval.control_arena_export --out ./control-arena-export
 pytest
 python3 scripts/lab_brand_wall.py
 ```
 
-`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md).
+`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export refuses an output directory owned by another user or world-writable, and an output name that is a link; each file is written to a new temporary name and renamed into place. The fixture root is found next to the `joint_eval` package or given with `--root`; the working directory is not searched.
 
 `python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
 
