@@ -33,7 +33,6 @@ from joint_eval.loader import (
     FixturePathError,
     contained_dir,
     dumps_canonical,
-    load_index,
     load_object,
     read_fixture_text,
     story_dir,
@@ -81,8 +80,11 @@ def run_joint_story(*, root: Path | None = None) -> JointStoryResult:
     del _pep_evaluate
     supply_evaluate, supply_verdict, supply_origins = _import_supply()
 
-    base = story_dir() if root is None else Path(root) / "eval" / "joint_story"
-    index = load_index() if root is None else load_object(base / "index.json")
+    try:
+        base = story_dir(root)
+    except FixturePathError as exc:
+        raise JointEvalError(f"fixture refused: {exc}") from exc
+    index = load_object(base / "index.json")
     rows = index.get("rows")
     if not isinstance(rows, list) or not rows:
         raise JointEvalError("joint story index.rows must be a non-empty array")

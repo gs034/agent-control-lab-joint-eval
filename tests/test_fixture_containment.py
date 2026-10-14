@@ -275,3 +275,141 @@ def test_paired_runner_pins_sequence_envelope_dirs(tmp_path: Path) -> None:
     seq_path.write_text(json.dumps(spec), encoding="utf-8")
     with pytest.raises((PairedRunnerError, JointEvalError), match="envelope dir must be envelope_2"):
         run_paired(root=root)
+
+
+# Review follow-ups
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+def test_export_into_a_parent_owned_by_another_user_is_refused(tmp_path: Path) -> None:
+    if os.geteuid() != 0:
+        pytest.skip("needs chown")
+    shared = tmp_path / "shared"
+    shared.mkdir()
+    os.chown(shared, 65534, 65534)
+    with pytest.raises(ControlArenaExportError, match="parent is owned by another user"):
+        write_control_arena_export(shared / "out")
+    assert list(shared.iterdir()) == []
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX modes")
+def test_export_into_a_world_writable_non_sticky_parent_is_refused(tmp_path: Path) -> None:
+    shared = tmp_path / "shared"
+    shared.mkdir()
+    shared.chmod(0o777)
+    with pytest.raises(ControlArenaExportError, match="without the sticky bit"):
+        write_control_arena_export(shared / "out")
+    sticky = tmp_path / "sticky"
+    sticky.mkdir()
+    sticky.chmod(0o1777)
+    write_control_arena_export(sticky / "out")
+    assert (sticky / "out" / "tools.json").is_file()
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+def test_export_through_another_users_symlink_is_refused(tmp_path: Path) -> None:
+    if os.geteuid() != 0:
+        pytest.skip("needs lchown")
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(victim, target_is_directory=True)
+    os.lchown(link, 65534, 65534)
+    with pytest.raises(ControlArenaExportError, match="another user's symlink"):
+        write_control_arena_export(link / "out")
+    assert list(victim.iterdir()) == []
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+def test_output_dir_swapped_after_the_check_does_not_redirect_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from joint_eval import safe_write
+
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    out = tmp_path / "out"
+    real = safe_write._require_own_directory
+
+    def _swap(fd: int, label: Path) -> None:
+        real(fd, label)
+        out.rename(tmp_path / "aside")
+        out.symlink_to(victim, target_is_directory=True)
+
+    monkeypatch.setattr(safe_write, "_require_own_directory", _swap)
+    write_control_arena_export(out)
+    assert list(victim.iterdir()) == []
+    assert (tmp_path / "aside" / "tools.json").is_file()
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+@pytest.mark.parametrize("name", ["p.json", "p.csv"])
+def test_paired_output_refuses_a_planted_link(tmp_path: Path, name: str) -> None:
+    from joint_eval.paired_runner import write_paired
+
+    victim = _secret(tmp_path, "victim.rc", "keep me\n")
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / name).symlink_to(victim)
+    with pytest.raises(PairedRunnerError, match="not a regular file"):
+        write_paired(run_paired(root=ROOT), out / "p.json")
+    assert victim.read_text(encoding="utf-8") == "keep me\n"
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+@pytest.mark.parametrize("name", ["allowlist.json", "update_policy.json"])
+def test_paired_runner_refuses_symlinked_supply_policy_files(tmp_path: Path, name: str) -> None:
+    from joint_eval.paired_runner import _supply_gated
+
+    folder = tmp_path / "fixture"
+    shutil.copytree(ROOT / "eval" / "joint_story" / "supply_plugin4shell_class", folder)
+    (folder / name).symlink_to(_secret(tmp_path, name, json.dumps({"allowed_origins": [SECRET]})))
+    with pytest.raises(PairedRunnerError, match="symlink"):
+        _supply_gated(folder)
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+@pytest.mark.parametrize("level", ["eval", "eval/joint_story"])
+def test_symlinked_story_root_is_refused(tmp_path: Path, level: str) -> None:
+    root = _tree(tmp_path)
+    moved = tmp_path / "moved"
+    shutil.move(str(root / level), moved)
+    (root / level).symlink_to(moved, target_is_directory=True)
+    with pytest.raises(JointEvalError, match="symlink"):
+        run_joint_story(root=root)
+    with pytest.raises(ControlArenaExportError, match="symlink"):
+        write_control_arena_export(tmp_path / "out", root=root)
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+def test_b7_note_and_fence_table_refuse_symlinks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from joint_eval import b7_table_id, fence_outcome
+
+    root = tmp_path / "tree"
+    for module in (b7_table_id, fence_outcome):
+        rel = Path(module.RELATIVE_PATH)
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        real = ROOT / rel
+        copy = tmp_path / ("copy-" + rel.name)
+        copy.write_bytes(real.read_bytes())
+        target.symlink_to(copy)
+    with pytest.raises(b7_table_id.B7TableIdError, match="symlink"):
+        b7_table_id.provisional_table_id(root=root, schema_version="1")
+    with pytest.raises(fence_outcome.FenceOutcomeError, match="symlink"):
+        fence_outcome.load_fence_outcome(root)
+
+
+def test_vendored_probe_counts_a_dangling_symlink(tmp_path: Path) -> None:
+    if not POSIX:
+        pytest.skip("POSIX symlinks")
+    from joint_eval import fence_outcome
+
+    data = fence_outcome.load_fence_outcome(ROOT)
+    lab_paths = [row["path"] for row in data["rows"] if row.get("kind") != "registered_outcome" and row.get("path")]
+    assert lab_paths
+    planted = tmp_path / lab_paths[0]
+    planted.parent.mkdir(parents=True, exist_ok=True)
+    planted.symlink_to(tmp_path / "missing")
+    with pytest.raises(fence_outcome.FenceOutcomeError, match="vendored"):
+        fence_outcome.validate_fence_outcome(data, root=tmp_path)

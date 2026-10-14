@@ -18,9 +18,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import secrets
-import stat
 import sys
 from pathlib import Path
 from typing import Any, Mapping
@@ -34,11 +31,11 @@ from joint_eval.loader import (
     FixturePathError,
     contained_dir,
     dumps_canonical,
-    load_index,
     load_object,
     read_fixture_text,
     story_dir,
 )
+from joint_eval.safe_write import OutputPathError, output_directory
 
 # Same instant as joint_eval.story.CLOCK. Kept here so this writer does not
 # import the live story runner.
@@ -94,8 +91,11 @@ class ControlArenaExportError(RuntimeError):
 
 def build_control_arena_export(*, root: Path | None = None) -> dict[str, Any]:
     """Build the three-file export documents from fixtures and frozen receipts."""
-    base = story_dir() if root is None else Path(root) / "eval" / "joint_story"
-    index = load_index() if root is None else load_object(base / "index.json")
+    try:
+        base = story_dir(root)
+    except FixturePathError as exc:
+        raise ControlArenaExportError(f"fixture refused: {exc}") from exc
+    index = load_object(base / "index.json")
     _require_existence_proof(index, label="index")
     rows = index.get("rows")
     if not isinstance(rows, list) or not rows:
@@ -138,11 +138,6 @@ def write_control_arena_export(
 ) -> dict[str, Any]:
     """Write ``trajectory.jsonl``, ``tools.json``, and ``metadata.json``."""
     document = build_control_arena_export(root=root)
-    output = Path(output_dir)
-    if output.is_symlink() or (output.exists() and not output.is_dir()):
-        raise ControlArenaExportError(f"output path is not a directory: {output}")
-    output.mkdir(parents=True, exist_ok=True)
-    _require_own_directory(output)
     lines = [
         json.dumps(row, sort_keys=True, ensure_ascii=False) for row in document["trajectories"]
     ]
@@ -154,12 +149,14 @@ def write_control_arena_export(
         (TRAJECTORY_NAME, text),
         (METADATA_NAME, dumps_canonical(document["metadata"])),
     )
-    for name, _body in outputs:
-        target = output / name
-        if target.is_symlink() or (target.exists() and not target.is_file()):
-            raise ControlArenaExportError(f"output entry is not a regular file: {target}")
-    for name, body in outputs:
-        _replace_file(output, name, body)
+    try:
+        with output_directory(output_dir) as output:
+            for name, _body in outputs:
+                output.require_writable_name(name)
+            for name, body in outputs:
+                output.replace(name, body)
+    except OutputPathError as exc:
+        raise ControlArenaExportError(str(exc)) from exc
     return document
 
 
@@ -240,41 +237,6 @@ def _load_row(base: Path, raw: Mapping[str, Any]) -> dict[str, Any]:
         "fixture_notes": str(raw.get("notes") or ""),
         "events": events,
     }
-
-
-def _require_own_directory(output: Path) -> None:
-    """Refuse an output directory another user owns or anyone can write.
-
-    A pre-created directory at a predictable path (``/tmp/...``) is how a
-    second local user would plant links at the output names.
-    """
-    if not hasattr(os, "geteuid"):
-        return
-    info = output.lstat()
-    if not stat.S_ISDIR(info.st_mode):
-        raise ControlArenaExportError(f"output path is not a directory: {output}")
-    if info.st_uid != os.geteuid():
-        raise ControlArenaExportError(f"output directory is owned by another user: {output}")
-    if stat.S_IMODE(info.st_mode) & stat.S_IWOTH:
-        raise ControlArenaExportError(f"output directory is world-writable: {output}")
-
-
-def _replace_file(output: Path, name: str, body: str) -> None:
-    """Write ``body`` to a fresh file, then rename it over ``name``. Never opens through a link."""
-    temporary = output / f".{name}.{secrets.token_hex(8)}.tmp"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-    flags |= getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
-    fd = os.open(temporary, flags, 0o644)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
-            handle.write(body)
-        os.replace(temporary, output / name)
-    except BaseException:
-        try:
-            os.unlink(temporary)
-        except OSError:
-            pass
-        raise
 
 
 def _within(base: Path, rel: str) -> Path:

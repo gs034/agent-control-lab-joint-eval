@@ -35,12 +35,12 @@ pytest
 python3 scripts/lab_brand_wall.py
 ```
 
-`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export refuses an output directory owned by another user or world-writable, and an output name that is a link; each file is written to a new temporary name and renamed into place. The fixture root is found next to the `joint_eval` package or given with `--root`; the working directory is not searched.
+`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export and the paired runner open their output directory by descriptor and refuse: a symlink in the output path that another user owns, a parent another user owns or anyone can write without the sticky bit, an output directory owned by another user or world-writable, and an output name that is a link. Each file is written to a new temporary name and renamed into place. A symlinked `eval/` or `eval/joint_story` is refused, and the supply-gate policy and allowlist files are checked before they are handed to supply-gate. The fixture root is found next to the `joint_eval` package or given with `--root`; the working directory is not searched.
 
 `python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
 
 ```bash
-python -m joint_eval.paired_runner --out /tmp/acl-paired.json
+python -m joint_eval.paired_runner --out ./paired/acl-paired.json
 ```
 
 That command uses the in-tree joint-story fixtures when sibling checkouts are unset. The 28 measured-corpus rows that have fixtures (the shared set in the 20–50 range) need pinned checkouts, not vendored trees:
@@ -48,7 +48,7 @@ That command uses the in-tree joint-story fixtures when sibling checkouts are un
 ```bash
 export ACL_PEP_ROOT=/path/to/agent-control-lab-pep
 export ACL_SUPPLY_GATE_ROOT=/path/to/agent-control-lab-supply-gate
-python -m joint_eval.paired_runner --out /tmp/acl-paired.json
+python -m joint_eval.paired_runner --out ./paired/acl-paired.json
 ```
 
 `ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A short summary goes to stdout.

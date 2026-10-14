@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from joint_eval.loader import repo_root
+from joint_eval.loader import FixturePathError, read_fixture_bytes, repo_root
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
 
 ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05"
@@ -55,7 +55,10 @@ def provisional_table_id(*, root: Path | None = None, schema_version: str) -> di
     path = b7_markdown_path(root)
     if not path.is_file():
         raise B7TableIdError(f"frozen B7 note missing: {path}")
-    raw = path.read_bytes()
+    try:
+        raw = read_fixture_bytes(path)
+    except FixturePathError as exc:
+        raise B7TableIdError(f"frozen B7 note refused: {exc}") from exc
     if ARTEFACT_ID.encode("utf-8") not in raw:
         raise B7TableIdError("frozen B7 note does not name its artefact id")
     markdown_hash = hashlib.sha256(raw).hexdigest()

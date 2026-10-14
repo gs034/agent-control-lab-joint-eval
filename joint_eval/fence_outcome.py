@@ -11,10 +11,11 @@ kernel fence, and does not mint a table_id.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping
 
-from joint_eval.loader import repo_root
+from joint_eval.loader import FixturePathError, read_fixture_text, repo_root
 from joint_eval.pins import PEP_SHA
 
 RELATIVE_PATH = Path("eval") / "measured_corpus" / "fence-outcome-b9.json"
@@ -35,7 +36,10 @@ def load_fence_outcome(root: Path | None = None) -> dict[str, Any]:
     """Load and check the B9 table. Sibling pep source is not read."""
     base = repo_root() if root is None else Path(root)
     path = base / RELATIVE_PATH
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(read_fixture_text(path))
+    except FixturePathError as exc:
+        raise FenceOutcomeError(f"fence outcome table refused: {exc}") from exc
     if not isinstance(data, dict):
         raise FenceOutcomeError("fence outcome table must be a JSON object")
     validate_fence_outcome(data, root=base)
@@ -114,7 +118,8 @@ def validate_fence_outcome(table: Mapping[str, Any], *, root: Path | None = None
                 raise FenceOutcomeError("lab fence fixture path must stay inside the pep tree")
             if ".." in Path(path).parts:
                 raise FenceOutcomeError("lab fence fixture path must not climb")
-            if base is not None and (base / path).exists():
+            # lexists: a dangling symlink at that name is still a vendored entry.
+            if base is not None and os.path.lexists(base / path):
                 raise FenceOutcomeError(f"pep fixture must not be vendored: {path}")
         elif kind != "registered_outcome":
             raise FenceOutcomeError(f"unknown row kind {kind}")

@@ -36,12 +36,13 @@ def repo_root() -> Path:
     raise FileNotFoundError("eval/joint_story/index.json not found next to joint_eval; pass --root")
 
 
-def story_dir() -> Path:
-    return repo_root() / "eval" / "joint_story"
+def story_dir(root: Path | None = None) -> Path:
+    """``<root>/eval/joint_story``, refusing a symlinked ``eval`` or ``joint_story``."""
+    return contained_dir(repo_root() if root is None else Path(root), "eval/joint_story")
 
 
 def load_index() -> dict[str, Any]:
-    data = json.loads((story_dir() / INDEX_NAME).read_text(encoding="utf-8"))
+    data = json.loads(read_fixture_text(story_dir() / INDEX_NAME))
     if not isinstance(data, dict):
         raise ValueError("joint story index must be a JSON object")
     return data
@@ -96,6 +97,17 @@ def read_fixture_bytes(path: Path) -> bytes:
         if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
             raise FixturePathError(f"fixture file is not a regular file: {path.name}")
         return handle.read()
+
+
+def regular_fixture_file(path: Path) -> Path:
+    """Return ``path`` when it is a regular file and not a symlink, for a reader that opens by path."""
+    path = Path(path)
+    info = os.lstat(path)
+    if stat.S_ISLNK(info.st_mode):
+        raise FixturePathError(f"fixture file is a symlink: {path.name}")
+    if not stat.S_ISREG(info.st_mode):
+        raise FixturePathError(f"fixture file is not a regular file: {path.name}")
+    return path
 
 
 def read_fixture_text(path: Path) -> str:
