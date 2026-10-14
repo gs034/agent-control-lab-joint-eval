@@ -151,10 +151,7 @@ def write_control_arena_export(
     )
     try:
         with output_directory(output_dir) as output:
-            for name, _body in outputs:
-                output.require_writable_name(name)
-            for name, body in outputs:
-                output.replace(name, body)
+            output.replace_all(outputs)
     except OutputPathError as exc:
         raise ControlArenaExportError(str(exc)) from exc
     return document
