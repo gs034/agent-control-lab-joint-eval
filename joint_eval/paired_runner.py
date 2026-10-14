@@ -53,7 +53,14 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from joint_eval.b7_table_id import provisional_table_id
-from joint_eval.loader import dumps_canonical, load_object, repo_root
+from joint_eval.loader import (
+    FixturePathError,
+    contained_dir,
+    dumps_canonical,
+    load_object,
+    read_fixture_text,
+    repo_root,
+)
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA, pin_document
 from joint_eval.story import (
     CLOCK,
@@ -680,10 +687,13 @@ def _supply_sequence(folder: Path, supply_api: tuple[Any, Any, Any]) -> dict[str
     if not isinstance(envelopes_spec, list) or len(envelopes_spec) != 2:
         raise PairedRunnerError(f"{folder.name}: sequence envelopes must be a two-item array")
     evaluated: list[dict[str, Any]] = []
-    for item in envelopes_spec:
+    for index, item in enumerate(envelopes_spec):
         if not isinstance(item, Mapping):
             raise PairedRunnerError(f"{folder.name}: envelope spec must be an object")
-        sub = folder / str(item["dir"])
+        # Pinned as in story.py; a sequence cannot point its envelopes elsewhere.
+        if item.get("dir") != f"envelope_{index + 1}":
+            raise PairedRunnerError(f"{folder.name}: envelope dir must be envelope_{index + 1}")
+        sub = _folder(folder, item["dir"])
         outcome = _supply_joint_dir(sub, supply_api)
         evaluated.append(
             {
@@ -764,7 +774,7 @@ def _pep_plan(
     if joint is not None and _is_pep_joint(base, joint):
         return {
             "mode": "pep_joint",
-            "folder": base / str(joint["path"]),
+            "folder": _folder(base, joint["path"]),
             "fixture": str(joint["path"]),
             "note": "",
         }
@@ -775,7 +785,7 @@ def _pep_plan(
         _check_fixture_sha(official, PEP_SHA, "pep")
         return {
             "mode": "pep_official",
-            "folder": pep_root / str(official["path"]),
+            "folder": _folder(pep_root, official["path"]),
             "fixture": str(official["path"]),
             "note": "",
         }
@@ -787,7 +797,7 @@ def _pep_plan(
     _check_fixture_sha(corpus, PEP_SHA, "pep")
     return {
         "mode": "pep_corpus",
-        "folder": pep_root / str(corpus["path"]),
+        "folder": _folder(pep_root, corpus["path"]),
         "fixture": str(corpus["path"]),
         "class_id": (raw.get("taxonomy") or {}).get("class_id"),
         "note": "",
@@ -804,7 +814,7 @@ def _stack_plan(
     joint = _fixture(raw, "joint_story")
     if joint is not None:
         _check_joint_fixture(joint)
-        folder = base / str(joint["path"])
+        folder = _folder(base, joint["path"])
         if (folder / "sequence.json").is_file():
             return {
                 "mode": "supply_sequence",
@@ -832,7 +842,7 @@ def _stack_plan(
         _check_fixture_sha(supply, SUPPLY_GATE_SHA, "supply-gate")
         return {
             "mode": "supply_gated",
-            "folder": supply_root / str(supply["path"]),
+            "folder": _folder(supply_root, supply["path"]),
             "fixture": str(supply["path"]),
             "note": (
                 "Corpus stack status stays not_applicable (no joint_story "
@@ -847,8 +857,16 @@ def _stack_plan(
     return {"mode": "not_applicable", "fixture": None, "note": ""}
 
 
+def _folder(root: Path, rel: object) -> Path:
+    """A fixture folder from index or sequence data, confined to ``root``."""
+    try:
+        return contained_dir(root, rel)
+    except FixturePathError as exc:
+        raise PairedRunnerError(f"fixture refused: {exc}") from exc
+
+
 def _is_pep_joint(base: Path, fix: Mapping[str, Any]) -> bool:
-    folder = base / str(fix["path"])
+    folder = _folder(base, fix["path"])
     if (folder / "sequence.json").is_file():
         return False
     envelope_path = folder / "envelope.json"
@@ -919,7 +937,7 @@ def _fixture_rows(index: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 def _load_corpus_index(base: Path) -> dict[str, Any]:
     path = base / CORPUS_INDEX
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(read_fixture_text(path))
     if not isinstance(data, dict):
         raise PairedRunnerError("measured corpus index must be a JSON object")
     return data
@@ -983,7 +1001,7 @@ def _read_prose(folder: Path) -> str | None:
     for name in ("untrusted_prose.txt", "malicious_prose.txt"):
         path = folder / name
         if path.is_file():
-            return path.read_text(encoding="utf-8")
+            return read_fixture_text(path)
     return None
 
 
