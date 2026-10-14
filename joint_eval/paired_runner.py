@@ -218,10 +218,7 @@ def write_paired(document: Mapping[str, Any], out: Path) -> tuple[Path, Path]:
     outputs = ((path.name, dumps_canonical(document)), (csv_path.name, _csv_text(document)))
     try:
         with output_directory(path.parent) as output:
-            for name, _body in outputs:
-                output.require_writable_name(name)
-            for name, body in outputs:
-                output.replace(name, body)
+            output.replace_all(outputs)
     except OutputPathError as exc:
         raise PairedRunnerError(str(exc)) from exc
     return path, csv_path
