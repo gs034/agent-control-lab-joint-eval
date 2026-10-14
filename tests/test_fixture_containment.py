@@ -413,3 +413,32 @@ def test_vendored_probe_counts_a_dangling_symlink(tmp_path: Path) -> None:
     planted.symlink_to(tmp_path / "missing")
     with pytest.raises(fence_outcome.FenceOutcomeError, match="vendored"):
         fence_outcome.validate_fence_outcome(data, root=tmp_path)
+
+
+def test_pep_official_file_path_is_accepted_and_confined(tmp_path: Path) -> None:
+    """Regression: a pep_official fixture names a file, not a folder."""
+    from joint_eval.paired_runner import _fixture_file
+
+    root = tmp_path / "pep"
+    (root / "eval").mkdir(parents=True)
+    envelope = root / "eval" / "structured_envelope.example.json"
+    envelope.write_text("{}", encoding="utf-8")
+    assert _fixture_file(root, "eval/structured_envelope.example.json") == envelope.resolve()
+    (root / "top.json").write_text("{}", encoding="utf-8")
+    assert _fixture_file(root, "top.json").name == "top.json"
+    for bad in ("../outside.json", "/etc/passwd", "eval/../../x.json", "eval/", "", "eval/.."):
+        with pytest.raises(PairedRunnerError, match="fixture refused"):
+            _fixture_file(root, bad)
+    with pytest.raises(PairedRunnerError, match="fixture refused"):
+        _fixture_file(root, "eval")
+
+
+@pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
+def test_pep_official_file_symlink_is_refused(tmp_path: Path) -> None:
+    from joint_eval.paired_runner import _fixture_file
+
+    root = tmp_path / "pep"
+    (root / "eval").mkdir(parents=True)
+    (root / "eval" / "structured_envelope.example.json").symlink_to(_secret(tmp_path, "s.json", "{}"))
+    with pytest.raises(PairedRunnerError, match="symlink"):
+        _fixture_file(root, "eval/structured_envelope.example.json")
