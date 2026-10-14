@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import os
 import subprocess
@@ -59,9 +60,11 @@ from joint_eval.loader import (
     dumps_canonical,
     load_object,
     read_fixture_text,
+    regular_fixture_file,
     repo_root,
 )
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA, pin_document
+from joint_eval.safe_write import OutputPathError, output_directory
 from joint_eval.story import (
     CLOCK,
     JointEvalError,
@@ -211,10 +214,16 @@ def write_paired(document: Mapping[str, Any], out: Path) -> tuple[Path, Path]:
     path = Path(out)
     if path.suffix.lower() != ".json":
         raise PairedRunnerError("--out must be a .json path")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(dumps_canonical(document), encoding="utf-8")
     csv_path = path.with_suffix(".csv")
-    _write_csv(document, csv_path)
+    outputs = ((path.name, dumps_canonical(document)), (csv_path.name, _csv_text(document)))
+    try:
+        with output_directory(path.parent) as output:
+            for name, _body in outputs:
+                output.require_writable_name(name)
+            for name, body in outputs:
+                output.replace(name, body)
+    except OutputPathError as exc:
+        raise PairedRunnerError(str(exc)) from exc
     return path, csv_path
 
 
@@ -723,12 +732,13 @@ def _supply_gated(folder: Path) -> dict[str, Any]:
     kwargs: dict[str, Any] = {"kill_active": False, "use_env": False}
     policy_path = folder / "update_policy.json"
     allowlist_path = folder / "allowlist.json"
-    if policy_path.is_file():
-        kwargs["update_policy_path"] = policy_path
+    # supply_gate reads these by path; refuse a link or special file first.
+    if policy_path.is_file() or policy_path.is_symlink():
+        kwargs["update_policy_path"] = _regular(policy_path)
     else:
         kwargs["update_policy"] = UpdatePolicy.fail_closed_default()
-    if allowlist_path.is_file():
-        kwargs["allowlist_path"] = allowlist_path
+    if allowlist_path.is_file() or allowlist_path.is_symlink():
+        kwargs["allowlist_path"] = _regular(allowlist_path)
     else:
         kwargs["allowlist"] = load_allowlist(use_env=False)
     prose = _read_prose(folder)
@@ -861,6 +871,13 @@ def _folder(root: Path, rel: object) -> Path:
     """A fixture folder from index or sequence data, confined to ``root``."""
     try:
         return contained_dir(root, rel)
+    except FixturePathError as exc:
+        raise PairedRunnerError(f"fixture refused: {exc}") from exc
+
+
+def _regular(path: Path) -> Path:
+    try:
+        return regular_fixture_file(path)
     except FixturePathError as exc:
         raise PairedRunnerError(f"fixture refused: {exc}") from exc
 
@@ -1019,7 +1036,7 @@ def _supply_allowed(decision: Any) -> bool:
     return bool(allowed)
 
 
-def _write_csv(document: Mapping[str, Any], path: Path) -> None:
+def _csv_text(document: Mapping[str, Any]) -> str:
     fields = (
         "threat_id",
         "kind",
@@ -1035,30 +1052,31 @@ def _write_csv(document: Mapping[str, Any], path: Path) -> None:
         "invoked",
         "fixture",
     )
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
-        writer.writeheader()
-        for row in document["rows"]:
-            for arm in ARM_ORDER:
-                cell = row["arms"][arm]
-                writer.writerow(
-                    {
-                        "threat_id": row["threat_id"],
-                        "kind": row["kind"],
-                        "arm": arm,
-                        "corpus_arm": cell["corpus_arm"],
-                        "corpus_status": cell["corpus_status"],
-                        "control_off_decision": cell["control_off_decision"],
-                        "control_on_decision": cell["control_on_decision"],
-                        "attack_success_off": _csv_bool(cell["attack_success_off"]),
-                        "attack_success_on": _csv_bool(cell["attack_success_on"]),
-                        "delta": "" if cell["delta"] is None else cell["delta"],
-                        "path": cell["path"],
-                        "invoked": _csv_bool(cell["invoked"]),
-                        "fixture": cell["fixture"] or "",
-                    }
-                )
+    handle = io.StringIO(newline="")
+    writer = csv.DictWriter(handle, fieldnames=fields)
+    writer.writeheader()
+    for row in document["rows"]:
+        for arm in ARM_ORDER:
+            cell = row["arms"][arm]
+            writer.writerow(
+                {
+                    "threat_id": row["threat_id"],
+                    "kind": row["kind"],
+                    "arm": arm,
+                    "corpus_arm": cell["corpus_arm"],
+                    "corpus_status": cell["corpus_status"],
+                    "control_off_decision": cell["control_off_decision"],
+                    "control_on_decision": cell["control_on_decision"],
+                    "attack_success_off": _csv_bool(cell["attack_success_off"]),
+                    "attack_success_on": _csv_bool(cell["attack_success_on"]),
+                    "delta": "" if cell["delta"] is None else cell["delta"],
+                    "path": cell["path"],
+                    "invoked": _csv_bool(cell["invoked"]),
+                    "fixture": cell["fixture"] or "",
+                }
+            )
 
+    return handle.getvalue()
 
 def _csv_bool(value: bool | None) -> str:
     if value is None:
