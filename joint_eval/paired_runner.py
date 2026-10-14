@@ -792,7 +792,7 @@ def _pep_plan(
         _check_fixture_sha(official, PEP_SHA, "pep")
         return {
             "mode": "pep_official",
-            "folder": _folder(pep_root, official["path"]),
+            "folder": _fixture_file(pep_root, official["path"]),
             "fixture": str(official["path"]),
             "note": "",
         }
@@ -870,6 +870,17 @@ def _folder(root: Path, rel: object) -> Path:
         return contained_dir(root, rel)
     except FixturePathError as exc:
         raise PairedRunnerError(f"fixture refused: {exc}") from exc
+
+
+def _fixture_file(root: Path, rel: object) -> Path:
+    """A fixture *file* named by index data: its folder confined to ``root``, the file itself regular."""
+    if not isinstance(rel, str) or not rel.strip() or rel.endswith("/"):
+        raise PairedRunnerError(f"fixture refused: fixture file path must name a file: {rel!r}")
+    parent, _sep, name = rel.rstrip().rpartition("/")
+    folder = _folder(root, parent) if parent else _folder(root, ".")
+    if name in {"", ".", ".."}:
+        raise PairedRunnerError(f"fixture refused: fixture file path must name a file: {rel!r}")
+    return _regular(folder / name)
 
 
 def _regular(path: Path) -> Path:
