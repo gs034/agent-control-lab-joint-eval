@@ -21,10 +21,12 @@ Each row carries a status as of 14 October 2026. **mitigated**: the pinned sibli
 
 | Joint step | Class | Citation / pattern name | Existence-proof DENY | Status (14 Oct 2026) |
 | --- | --- | --- | --- | --- |
-| Supply Plugin4Shell-class | Marketplace/plugin pin that would satisfy a naive SHA pin on a mutable ref / swapped tree, plus skip-verify prose | Plugin4Shell-class (threat pattern name, not a vendor product) | `prose_rejected_as_policy` + `head_mismatch` | mitigated (existence proof at the pinned supply-gate) |
-| Supply pin-without-verify | Pin present, post-checkout HEAD omitted | Plugin4Shell-class family (verify skipped) | `verify_missing` | mitigated (existence proof at the pinned supply-gate) |
-| PEP monitor-bypass / prose-as-policy | Monitor SAFE / please-allow coax treated as policy | Monitor-bypass class ([arXiv:2609.19587](https://arxiv.org/abs/2609.19587)) | `agent_prose_rejected` | mitigated (existence proof at the pinned pep) |
-| PEP approval-binding mismatch | HITL/TTL approval for one invoke, args substituted before execute | Bind class ([arXiv:2609.21081](https://arxiv.org/abs/2609.21081)) | `approval_binding_mismatch` | mitigated (existence proof at the pinned pep) |
+| Supply Plugin4Shell-class | Marketplace/plugin pin that would satisfy a naive SHA pin on a mutable ref / swapped tree, plus skip-verify prose | Plugin4Shell-class (threat pattern name, not a vendor product) | `prose_rejected_as_policy` + `head_mismatch` | mitigated (existence proof at supply-gate `7044a313`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
+| Supply pin-without-verify | Pin present, post-checkout HEAD omitted | Plugin4Shell-class family (verify skipped) | `verify_missing` | mitigated (existence proof at supply-gate `7044a313`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
+| PEP monitor-bypass / prose-as-policy | Monitor SAFE / please-allow coax treated as policy | Monitor-bypass class ([arXiv:2609.19587](https://arxiv.org/abs/2609.19587)) | `agent_prose_rejected` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
+| PEP approval-binding mismatch | HITL/TTL approval for one invoke, args substituted before execute | Bind class ([arXiv:2609.21081](https://arxiv.org/abs/2609.21081)) | `approval_binding_mismatch` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
+
+The four mitigated rows rest on pep `76c6d4be` and supply-gate `7044a313`. Those pins predate the current fixes. main does not verify fixture bytes until PR #30 lands.
 
 Citations are arXiv identifiers and pattern names only. This tree does not reproduce papers and does not report attack-success rates.
 
