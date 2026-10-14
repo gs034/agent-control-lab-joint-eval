@@ -154,6 +154,10 @@ class OutputDirectory:
         A file system that cannot fsync a directory (EINVAL, ENOTSUP, ENOTTY)
         is left as is. Any other error, EIO and ENOSPC included, propagates:
         swallowing it would claim durability that was not delivered.
+
+        The fallback path opens the directory before that fsync. That open
+        returns quietly only for EINVAL, ENOTSUP, EOPNOTSUPP, ENOTTY, EACCES,
+        and EPERM. Any other error from the open is re-raised.
         """
         if self._fd is not None:
             _fsync_directory_fd(self._fd)
@@ -162,7 +166,9 @@ class OutputDirectory:
             return
         try:
             fd = os.open(self.path, os.O_RDONLY | os.O_DIRECTORY)
-        except OSError:
+        except OSError as exc:
+            if exc.errno not in _DIRECTORY_OPEN_QUIET:
+                raise
             return
         try:
             _fsync_directory_fd(fd)
@@ -223,6 +229,19 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
 
 _FSYNC_UNSUPPORTED = frozenset(
     code for code in (getattr(errno, "EINVAL", None), getattr(errno, "ENOTSUP", None), getattr(errno, "ENOTTY", None)) if code
+)
+
+_DIRECTORY_OPEN_QUIET = frozenset(
+    code
+    for code in (
+        getattr(errno, "EINVAL", None),
+        getattr(errno, "ENOTSUP", None),
+        getattr(errno, "EOPNOTSUPP", None),
+        getattr(errno, "ENOTTY", None),
+        getattr(errno, "EACCES", None),
+        getattr(errno, "EPERM", None),
+    )
+    if code
 )
 
 
