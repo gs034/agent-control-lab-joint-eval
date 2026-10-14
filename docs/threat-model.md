@@ -17,7 +17,7 @@ Monitors, models, MCP hosts, and agent prose are **untrusted relative to those p
 
 ## Classes exercised
 
-Each row carries a status as of 14 October 2026. **mitigated**: the pinned sibling package denies the class and a joint-story row shows it at this tip. **accepted residual**: a known gap, written down and accepted. **unmitigated**: a gap the roadmap still owes work on. A status is a statement about this harness and its pinned siblings, not a measured result; this harness has no measured counts yet (see `docs/measurement-validity.md`).
+Each row carries a status as of 14 October 2026. **mitigated**: the pinned sibling package denies the class and a joint-story row shows it at this tip. **accepted residual**: a known gap, written down and accepted. **unmitigated**: a gap the roadmap still owes work on. Work item codes (L3.1 host-side state binding, L3.6 tamper-evident host log, L3.8 persistent single-use grants, L3.10 kill reach into a running tool, L4.1 provider-executed tools, L4.2 alternate-path fixtures and counts, L4.5 a materialiser so HEAD and hook digests are not caller-supplied, L4.6 omission detection, L5 measured efficacy, L6 tagged release) name items in the owner's route-to-production plan, which is not in this repository; the code is the pointer, the phrase is the meaning. A status is a statement about this harness and its pinned siblings, not a measured result; this harness has no measured counts yet (see `docs/measurement-validity.md`).
 
 | Joint step | Class | Citation / pattern name | Existence-proof DENY | Status (14 Oct 2026) |
 | --- | --- | --- | --- | --- |
