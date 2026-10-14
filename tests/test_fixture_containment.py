@@ -584,3 +584,30 @@ def test_replace_all_refuses_duplicate_names(tmp_path: Path) -> None:
         with safe_write.output_directory(tmp_path / "out") as output:
             output.replace_all([("a.json", "1"), ("a.json", "2")])
     assert list((tmp_path / "out").iterdir()) == []
+
+
+def test_fixture_file_refuses_a_hard_link_to_a_file_outside_the_root(tmp_path: Path) -> None:
+    """T6 follow-up: a second name for an outside inode is not a confined fixture."""
+    from joint_eval.paired_runner import _fixture_file
+
+    root = tmp_path / "root"
+    (root / "f").mkdir(parents=True)
+    outside = tmp_path / "outside.json"
+    outside.write_text("{}\n", encoding="utf-8")
+    os.link(outside, root / "f" / "hl.json")
+    with pytest.raises(PairedRunnerError, match="hard link"):
+        _fixture_file(root, "f/hl.json")
+    with pytest.raises(FixturePathError, match="hard link"):
+        loader.read_fixture_bytes(root / "f" / "hl.json")
+    (root / "f" / "plain.json").write_text("{}\n", encoding="utf-8")
+    assert _fixture_file(root, "f/plain.json") == root / "f" / "plain.json"
+
+
+@pytest.mark.parametrize("rel", ["f/..\\..\\outside.json", "f\\x.json", "f/x\\y.json"])
+def test_fixture_file_refuses_a_backslash_in_the_name(tmp_path: Path, rel: str) -> None:
+    from joint_eval.paired_runner import _fixture_file
+
+    root = tmp_path / "root"
+    (root / "f").mkdir(parents=True)
+    with pytest.raises(PairedRunnerError, match="backslash"):
+        _fixture_file(root, rel)

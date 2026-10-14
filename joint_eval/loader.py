@@ -94,9 +94,18 @@ def read_fixture_bytes(path: Path) -> bytes:
             raise FixturePathError(f"fixture file is a symlink: {path.name}") from exc
         raise
     with os.fdopen(fd, "rb") as handle:
-        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode):
             raise FixturePathError(f"fixture file is not a regular file: {path.name}")
+        _refuse_hard_link(info, path)
         return handle.read()
+
+
+def _refuse_hard_link(info: os.stat_result, path: Path) -> None:
+    # A second name for the inode may live outside the fixture root; git never
+    # checks out a hard link, so one here was planted.
+    if info.st_nlink > 1:
+        raise FixturePathError(f"fixture file has more than one hard link: {path.name}")
 
 
 def regular_fixture_file(path: Path) -> Path:
@@ -107,6 +116,7 @@ def regular_fixture_file(path: Path) -> Path:
         raise FixturePathError(f"fixture file is a symlink: {path.name}")
     if not stat.S_ISREG(info.st_mode):
         raise FixturePathError(f"fixture file is not a regular file: {path.name}")
+    _refuse_hard_link(info, path)
     return path
 
 
