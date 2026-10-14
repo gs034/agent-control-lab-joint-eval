@@ -53,6 +53,17 @@ python -m joint_eval.paired_runner --out ./paired/acl-paired.json
 
 `ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A short summary goes to stdout.
 
+### Sibling pin check
+
+A `HEAD` equal to the pin is not enough on its own: a `.git/HEAD` file that names the pin and holds no objects would pass, and so would a real checkout at the pin with an edited fixture. `joint_eval/sibling_pin.py` checks the bytes the runner uses:
+
+- The checkout needs a `.git` directory (a `.git` file or link is refused). Its repository-local git config may set only a short list of inert keys (`core.*` format and filemode keys, `remote.*.url`, `remote.*.fetch`, `branch.*.remote`, `branch.*.merge`). Any other key, such as `extensions.partialClone`, `remote.*.promisor`, `core.fsmonitor`, `include.path` or a filter, is refused before git reads an object. A SHA-256 repository is refused.
+- The pinned commit and each tree on the way to a fixture are read with `git cat-file` and hashed in Python. An object whose bytes do not hash to its id is refused, so a planted loose object cannot stand in for the pinned tree.
+- Each fixture file is read from the worktree, its git blob id is computed from the exact bytes read, and that id must equal the blob id the pinned tree lists for the path. A file the pinned tree does not list is refused when the runner looks for it, and so is a listed file the checkout lacks. The supply-gate update policy and allowlist are passed to `supply_gate` as private copies of the checked bytes.
+- Git runs with `--git-dir`, no system or global config, inherited `GIT_*` variables dropped, hooks and fsmonitor off, a timeout, and `GIT_ALLOW_PROTOCOL` set to a name that is not a protocol, so no transport or remote helper can start. Only `config --list`, `rev-parse` and `cat-file` run.
+
+Any failure stops the run with a `paired-runner unavailable` message. No table is written.
+
 `python -m joint_eval.demo` prints the joint story document (pins, DENY receipts, coverage limits) and exits 0 only when every step DENY’d without invoke.
 
 ## Pin / install (no vendoring)

@@ -7,6 +7,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -15,6 +16,7 @@ import pytest
 from joint_eval.paired_runner import (
     LABEL,
     RUNNER_IMPLEMENTED,
+    PairedRunnerError,
     format_summary,
     main,
     run_paired,
@@ -178,6 +180,81 @@ def test_full_fixture_set_when_pinned_checkouts_are_present() -> None:
                 assert cell["attack_success_off"] is False
                 assert cell["attack_success_on"] is False
                 assert cell["delta"] == 0
+
+
+def _pinned_copies(tmp_path: Path) -> tuple[Path, Path]:
+    """Copies of the pinned sibling checkouts, safe to tamper with."""
+    pep = os.environ.get("ACL_PAIRED_TEST_PEP_ROOT", "")
+    supply = os.environ.get("ACL_PAIRED_TEST_SUPPLY_ROOT", "")
+    if not pep or not supply:
+        pytest.skip("pinned sibling checkouts not provided")
+    pep_copy = tmp_path / "pep"
+    supply_copy = tmp_path / "supply"
+    shutil.copytree(pep, pep_copy, symlinks=True)
+    shutil.copytree(supply, supply_copy, symlinks=True)
+    return pep_copy, supply_copy
+
+
+def _strip_objects(checkout: Path) -> None:
+    """Leave .git with HEAD at the pin and no objects (the fake-HEAD tree)."""
+    git_dir = checkout / ".git"
+    shutil.rmtree(git_dir)
+    (git_dir / "objects").mkdir(parents=True)
+    (git_dir / "refs").mkdir()
+    (git_dir / "HEAD").write_text(PEP_SHA + "\n", encoding="ascii")
+
+
+def test_untouched_pinned_copies_pass(tmp_path: Path) -> None:
+    pep, supply = _pinned_copies(tmp_path)
+    document = run_paired(root=ROOT, pep_root=pep, supply_root=supply)
+    assert document["ok"] is True
+    assert document["row_source"] == "measured_corpus_fixtures"
+
+
+def test_head_only_pep_tree_is_refused(tmp_path: Path) -> None:
+    pep, supply = _pinned_copies(tmp_path)
+    _strip_objects(pep)
+    with pytest.raises(PairedRunnerError, match="config was not read|does not hold pinned commit"):
+        run_paired(root=ROOT, pep_root=pep, supply_root=supply)
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        ("edit", "does not match its bytes at pinned commit"),
+        ("delete", "missing from the checkout"),
+    ],
+)
+def test_tampered_fixture_in_a_pinned_checkout_cannot_flip_deny_to_allow(
+    tmp_path: Path, tamper: str, message: str
+) -> None:
+    pep, supply = _pinned_copies(tmp_path)
+    # auto_latest_rejected is a supply DENY only because its update policy
+    # names a weak mode. A pin_and_verify policy, or no policy file (the
+    # fail-closed default is pin_and_verify), would make the gate ALLOW.
+    policy = supply / "eval" / "auto_latest_rejected" / "update_policy.json"
+    if tamper == "edit":
+        policy.write_text(json.dumps({"mode": "pin_and_verify"}), encoding="utf-8")
+    else:
+        policy.unlink()
+    with pytest.raises(PairedRunnerError, match=message):
+        run_paired(root=ROOT, pep_root=pep, supply_root=supply)
+
+
+def test_planted_ext_promisor_in_a_sibling_checkout_does_not_run(tmp_path: Path) -> None:
+    pep, supply = _pinned_copies(tmp_path)
+    _strip_objects(pep)
+    sentinel = tmp_path / "sentinel"
+    (pep / ".git" / "config").write_text(
+        "[core]\n\trepositoryformatversion = 1\n"
+        "[extensions]\n\tpartialClone = origin\n"
+        f'[remote "origin"]\n\turl = ext::sh -c touch% {sentinel}\n\tpromisor = true\n'
+        '[protocol "ext"]\n\tallow = always\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(PairedRunnerError, match="not on the inert allowlist"):
+        run_paired(root=ROOT, pep_root=pep, supply_root=supply)
+    assert not sentinel.exists()
 
 
 def _empty_git(path: Path) -> Path:

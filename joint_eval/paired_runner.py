@@ -37,8 +37,11 @@ when both are booleans, otherwise null.
 
 Sibling fixtures are read from pinned checkouts (``ACL_PEP_ROOT`` /
 ``ACL_SUPPLY_GATE_ROOT`` or ``--pep-root`` / ``--supply-root``). Those
-trees are not vendored. When both roots are unset, the runner uses the
-measured-corpus rows that already have an in-tree joint-story fixture.
+trees are not vendored. Each file read from them must be byte-identical
+to the blob at the pinned commit (``joint_eval.sibling_pin``); a HEAD
+string equal to the pin is not enough. When both roots are unset, the
+runner uses the measured-corpus rows that already have an in-tree
+joint-story fixture.
 """
 
 from __future__ import annotations
@@ -48,8 +51,8 @@ import csv
 import io
 import json
 import os
-import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -59,12 +62,14 @@ from joint_eval.loader import (
     contained_dir,
     dumps_canonical,
     load_object,
+    read_fixture_bytes,
     read_fixture_text,
     regular_fixture_file,
     repo_root,
 )
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA, pin_document
 from joint_eval.safe_write import OutputPathError, output_directory
+from joint_eval.sibling_pin import PinnedTree, SiblingPinError
 from joint_eval.story import (
     CLOCK,
     JointEvalError,
@@ -102,6 +107,47 @@ class PairedRunnerError(JointEvalError):
     """Harness fault. Callers must fail closed (never treat as ALLOW)."""
 
 
+class _Source:
+    """Reads one plan's fixture files.
+
+    In-tree fixtures are read as plain files. Sibling fixtures go through a
+    ``PinnedTree``, so every byte used, and whether an optional file is
+    present, is checked against the pinned commit.
+    """
+
+    def __init__(self, tree: PinnedTree | None = None) -> None:
+        self.tree = tree
+
+    def read(self, path: Path) -> bytes:
+        try:
+            if self.tree is None:
+                return read_fixture_bytes(path)
+            return self.tree.read_bytes(path)
+        except (FixturePathError, SiblingPinError) as exc:
+            raise PairedRunnerError(f"fixture refused: {exc}") from exc
+
+    def text(self, path: Path) -> str:
+        return self.read(path).decode("utf-8")
+
+    def object(self, path: Path) -> dict[str, Any]:
+        data = json.loads(self.text(path))
+        if not isinstance(data, dict):
+            raise PairedRunnerError(f"JSON object required: {path}")
+        return data
+
+    def has(self, path: Path) -> bool:
+        """An optional file is present. A link counts, so the read refuses it."""
+        if self.tree is None:
+            return path.is_file() or path.is_symlink()
+        try:
+            return self.tree.has_file(path)
+        except SiblingPinError as exc:
+            raise PairedRunnerError(f"fixture refused: {exc}") from exc
+
+
+_IN_TREE = _Source()
+
+
 def run_paired(
     *,
     root: Path | None = None,
@@ -125,9 +171,11 @@ def run_paired(
             "the measured-corpus fixture set needs both pep and supply-gate "
             "checkouts (ACL_PEP_ROOT and ACL_SUPPLY_GATE_ROOT)"
         )
+    pep_tree: PinnedTree | None = None
+    supply_tree: PinnedTree | None = None
     if pep_checkout is not None and supply_checkout is not None:
-        _assert_pin(pep_checkout, PEP_SHA, "pep")
-        _assert_pin(supply_checkout, SUPPLY_GATE_SHA, "supply-gate")
+        pep_tree = _pinned_tree(pep_checkout, PEP_SHA, "pep")
+        supply_tree = _pinned_tree(supply_checkout, SUPPLY_GATE_SHA, "supply-gate")
         chosen = rows
         row_source = "measured_corpus_fixtures"
     else:
@@ -144,8 +192,8 @@ def run_paired(
         record, row_ok = _run_row(
             raw,
             base=base,
-            pep_root=pep_checkout,
-            supply_root=supply_checkout,
+            pep_tree=pep_tree,
+            supply_tree=supply_tree,
             pep_api=pep_api,
             supply_api=supply_api,
         )
@@ -388,18 +436,16 @@ def _run_row(
     raw: Mapping[str, Any],
     *,
     base: Path,
-    pep_root: Path | None,
-    supply_root: Path | None,
+    pep_tree: PinnedTree | None,
+    supply_tree: PinnedTree | None,
     pep_api: tuple[Any, Any, Any, Any],
     supply_api: tuple[Any, Any, Any],
 ) -> tuple[dict[str, Any], bool]:
     kind = _kind(raw)
     plans = {
         "monitor": _monitor_plan(raw),
-        "PEP": _pep_plan(raw, base=base, pep_root=pep_root),
-        "stack": _stack_plan(
-            raw, base=base, pep_root=pep_root, supply_root=supply_root
-        ),
+        "PEP": _pep_plan(raw, base=base, pep_tree=pep_tree),
+        "stack": _stack_plan(raw, base=base, supply_tree=supply_tree),
     }
     arms: dict[str, Any] = {}
     ok = True
@@ -563,18 +609,21 @@ def _control_on(
 ) -> dict[str, Any]:
     mode = str(plan["mode"])
     folder = Path(str(plan["folder"]))
+    source = plan.get("source") or _IN_TREE
     if mode == "pep_joint":
         return _pep_joint(folder, pep_api)
     if mode == "pep_official":
-        return _pep_official(folder, pep_api)
+        return _pep_official(folder, pep_api, source)
     if mode == "pep_corpus":
-        return _pep_corpus(folder, pep_api, class_id=str(plan.get("class_id") or ""))
+        return _pep_corpus(
+            folder, pep_api, class_id=str(plan.get("class_id") or ""), source=source
+        )
     if mode == "supply_joint":
         return _supply_joint_dir(folder, supply_api)
     if mode == "supply_sequence":
         return _supply_sequence(folder, supply_api)
     if mode == "supply_gated":
-        return _supply_gated(folder)
+        return _supply_gated(folder, source)
     raise PairedRunnerError(f"unknown control-on mode {mode}")
 
 
@@ -588,10 +637,14 @@ def _pep_joint(folder: Path, pep_api: tuple[Any, Any, Any, Any]) -> dict[str, An
     )
 
 
-def _pep_official(envelope_path: Path, pep_api: tuple[Any, Any, Any, Any]) -> dict[str, Any]:
+def _pep_official(
+    envelope_path: Path,
+    pep_api: tuple[Any, Any, Any, Any],
+    source: _Source = _IN_TREE,
+) -> dict[str, Any]:
     _evaluate, runtime_cls, gated, _approval_store = pep_api
     del _evaluate, _approval_store
-    envelope = load_object(envelope_path)
+    envelope = source.object(envelope_path)
     return _gated_pep(envelope, runtime_cls(), gated, path="pep.gated_invoke")
 
 
@@ -622,6 +675,7 @@ def _pep_corpus(
     pep_api: tuple[Any, Any, Any, Any],
     *,
     class_id: str,
+    source: _Source = _IN_TREE,
 ) -> dict[str, Any]:
     del pep_api
     from pep.corpus import CorpusRow, evaluate_corpus_row, gated_corpus_row
@@ -629,16 +683,16 @@ def _pep_corpus(
     envelope_path = folder / "envelope.json"
     runtime_path = folder / "runtime.json"
     receipt_path = folder / "expected_receipt.json"
-    if not receipt_path.is_file():
+    if not source.has(receipt_path):
         receipt_path = folder / "expected_deny_receipt.example.json"
-    runtime_spec = load_object(runtime_path)
+    runtime_spec = source.object(runtime_path)
     mapped = "ALLOW" if class_id.startswith("allow_") else "DENY"
     row = CorpusRow(
         row_id=folder.name,
         deny_class=class_id or folder.name,
         expected_decision=mapped,  # type: ignore[arg-type]
-        envelope=load_object(envelope_path),
-        expected_receipt=load_object(receipt_path) if receipt_path.is_file() else {},
+        envelope=source.object(envelope_path),
+        expected_receipt=source.object(receipt_path) if source.has(receipt_path) else {},
         runtime_spec=runtime_spec,
         envelope_path=envelope_path,
         receipt_path=receipt_path,
@@ -719,39 +773,50 @@ def _supply_sequence(folder: Path, supply_api: tuple[Any, Any, Any]) -> dict[str
     }
 
 
-def _supply_gated(folder: Path) -> dict[str, Any]:
+def _supply_gated(folder: Path, source: _Source = _IN_TREE) -> dict[str, Any]:
     from supply_gate.adapters import LocalWorktreeAdapter, gated_install_or_update
     from supply_gate.allowlist import load_allowlist
     from supply_gate.update_policy import UpdatePolicy
 
-    envelope = load_object(folder / "envelope.json")
-    observed, hooks = _load_supply_observed(folder / "observed_head.json")
+    envelope = source.object(folder / "envelope.json")
+    observed, hooks = _load_supply_observed(folder / "observed_head.json", source)
     kwargs: dict[str, Any] = {"kill_active": False, "use_env": False}
     policy_path = folder / "update_policy.json"
     allowlist_path = folder / "allowlist.json"
-    # supply_gate reads these by path; refuse a link or special file first.
-    if policy_path.is_file() or policy_path.is_symlink():
-        kwargs["update_policy_path"] = _regular(policy_path)
-    else:
-        kwargs["update_policy"] = UpdatePolicy.fail_closed_default()
-    if allowlist_path.is_file() or allowlist_path.is_symlink():
-        kwargs["allowlist_path"] = _regular(allowlist_path)
-    else:
-        kwargs["allowlist"] = load_allowlist(use_env=False)
-    prose = _read_prose(folder)
+    prose = _read_prose(folder, source)
     if prose is not None:
         kwargs["untrusted_prose"] = prose
-    decision = gated_install_or_update(
-        envelope,
-        LocalWorktreeAdapter(observed, observed_hooks=hooks),
-        **kwargs,
-    )
+    # supply_gate reads these two by path. It gets a private copy of the
+    # bytes this runner read and checked, so a link, a special file or a
+    # swap after the check cannot change what it parses.
+    with tempfile.TemporaryDirectory(prefix="acl-paired-") as private:
+        if source.has(policy_path):
+            kwargs["update_policy_path"] = _private_copy(private, policy_path, source)
+        else:
+            kwargs["update_policy"] = UpdatePolicy.fail_closed_default()
+        if source.has(allowlist_path):
+            kwargs["allowlist_path"] = _private_copy(private, allowlist_path, source)
+        else:
+            kwargs["allowlist"] = load_allowlist(use_env=False)
+        decision = gated_install_or_update(
+            envelope,
+            LocalWorktreeAdapter(observed, observed_hooks=hooks),
+            **kwargs,
+        )
     return {
         "decision": _verdict(decision),
         "invoked": False,
         "allowed": _supply_allowed(decision),
         "path": "supply_gate.gated_install_or_update",
     }
+
+
+def _private_copy(private: str, path: Path, source: _Source) -> Path:
+    data = source.read(path)
+    target = Path(private) / path.name
+    with open(target, "xb") as handle:
+        handle.write(data)
+    return target
 
 
 def _monitor_plan(raw: Mapping[str, Any]) -> dict[str, Any]:
@@ -770,7 +835,7 @@ def _pep_plan(
     raw: Mapping[str, Any],
     *,
     base: Path,
-    pep_root: Path | None,
+    pep_tree: PinnedTree | None,
 ) -> dict[str, Any]:
     status = str(raw["arms"]["host-PEP-alone"]["status"])
     if status != "mapped":
@@ -787,24 +852,26 @@ def _pep_plan(
         }
     official = _official_envelope(raw)
     if official is not None:
-        if pep_root is None:
+        if pep_tree is None:
             raise PairedRunnerError(f"{raw['threat_id']}: pep checkout required")
         _check_fixture_sha(official, PEP_SHA, "pep")
         return {
             "mode": "pep_official",
-            "folder": _fixture_file(pep_root, official["path"]),
+            "folder": _fixture_file(pep_tree.root, official["path"]),
+            "source": _Source(pep_tree),
             "fixture": str(official["path"]),
             "note": "",
         }
     corpus = _fixture(raw, "pep_corpus")
     if corpus is None:
         raise PairedRunnerError(f"{raw['threat_id']}: host-PEP-alone mapped without a pep fixture")
-    if pep_root is None:
+    if pep_tree is None:
         raise PairedRunnerError(f"{raw['threat_id']}: pep checkout required")
     _check_fixture_sha(corpus, PEP_SHA, "pep")
     return {
         "mode": "pep_corpus",
-        "folder": _folder(pep_root, corpus["path"]),
+        "folder": _folder(pep_tree.root, corpus["path"]),
+        "source": _Source(pep_tree),
         "fixture": str(corpus["path"]),
         "class_id": (raw.get("taxonomy") or {}).get("class_id"),
         "note": "",
@@ -815,8 +882,7 @@ def _stack_plan(
     raw: Mapping[str, Any],
     *,
     base: Path,
-    pep_root: Path | None,
-    supply_root: Path | None,
+    supply_tree: PinnedTree | None,
 ) -> dict[str, Any]:
     joint = _fixture(raw, "joint_story")
     if joint is not None:
@@ -844,12 +910,13 @@ def _stack_plan(
         }
     supply = _fixture(raw, "supply_eval")
     if supply is not None:
-        if supply_root is None:
+        if supply_tree is None:
             raise PairedRunnerError(f"{raw['threat_id']}: supply-gate checkout required")
         _check_fixture_sha(supply, SUPPLY_GATE_SHA, "supply-gate")
         return {
             "mode": "supply_gated",
-            "folder": _folder(supply_root, supply["path"]),
+            "folder": _folder(supply_tree.root, supply["path"]),
+            "source": _Source(supply_tree),
             "fixture": str(supply["path"]),
             "note": (
                 "Corpus stack status stays not_applicable (no joint_story "
@@ -860,7 +927,6 @@ def _stack_plan(
     status = str(raw["arms"]["stack"]["status"])
     if status == "mapped":
         raise PairedRunnerError(f"{raw['threat_id']}: stack mapped without a fixture")
-    del pep_root
     return {"mode": "not_applicable", "fixture": None, "note": ""}
 
 
@@ -989,28 +1055,20 @@ def _optional_root(explicit: Path | None, env_name: str) -> Path | None:
     return Path(raw)
 
 
-def _assert_pin(root: Path, expected: str, label: str) -> None:
-    if not root.is_dir():
-        raise PairedRunnerError(f"{label} checkout is not a directory: {root}")
-    proc = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        raise PairedRunnerError(f"{label} checkout is not a git HEAD at {root}")
-    head = proc.stdout.strip()
-    if head != expected:
-        raise PairedRunnerError(
-            f"{label} checkout HEAD {head} does not match pin {expected}"
-        )
+def _pinned_tree(root: Path, expected: str, label: str) -> PinnedTree:
+    """Open a sibling checkout whose fixture reads are checked against ``expected``."""
+    try:
+        return PinnedTree(root, expected, label)
+    except SiblingPinError as exc:
+        raise PairedRunnerError(str(exc)) from exc
 
 
-def _load_supply_observed(path: Path) -> tuple[str | None, dict[str, str] | None]:
-    if not path.is_file():
+def _load_supply_observed(
+    path: Path, source: _Source = _IN_TREE
+) -> tuple[str | None, dict[str, str] | None]:
+    if not source.has(path):
         return None, None
-    raw = load_object(path)
+    raw = source.object(path)
     observed = raw.get("observed_head")
     if observed is not None and not isinstance(observed, str):
         raise PairedRunnerError("observed_head must be a string or null")
@@ -1022,11 +1080,11 @@ def _load_supply_observed(path: Path) -> tuple[str | None, dict[str, str] | None
     return observed, {str(key): str(value) for key, value in hooks.items()}
 
 
-def _read_prose(folder: Path) -> str | None:
+def _read_prose(folder: Path, source: _Source = _IN_TREE) -> str | None:
     for name in ("untrusted_prose.txt", "malicious_prose.txt"):
         path = folder / name
-        if path.is_file():
-            return read_fixture_text(path)
+        if source.has(path):
+            return source.text(path)
     return None
 
 
