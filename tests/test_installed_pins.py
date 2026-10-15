@@ -14,6 +14,11 @@ from __future__ import annotations
 
 import importlib.metadata as metadata
 import json
+import os
+import shutil
+import subprocess
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -139,3 +144,168 @@ def test_a_shadowing_module_is_refused() -> None:
     shadow.__file__ = str(ROOT / "pep" / "__init__.py")
     with pytest.raises(PinMismatchError, match="not from the installed"):
         require_installed_pin(PEP_PACKAGE, PEP_SHA, shadow)
+
+
+# J-7: the distribution record must sit in the interpreter's site-packages
+# beside the imported package, and the installed files must match RECORD.
+
+
+def _dist_info(dist: metadata.Distribution) -> Path:
+    for item in dist.files or ():
+        if item.name == "RECORD" and item.parts[0].endswith(".dist-info"):
+            return Path(str(dist.locate_file(item))).parent
+    raise AssertionError("no RECORD")
+
+
+def _copy_install(dest: Path, package: str, top: str) -> Path:
+    """Copy one installed sibling (package and dist-info) into ``dest``."""
+    dist = metadata.distribution(package)
+    package_dir = Path(str(dist.locate_file(top)))
+    info = _dist_info(dist)
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(package_dir, dest / top, ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(info, dest / info.name)
+    return dest / info.name
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+@pytest.mark.parametrize(
+    ("package", "pinned", "top"),
+    [(PEP_PACKAGE, PEP_SHA, "pep"), (SUPPLY_GATE_PACKAGE, SUPPLY_GATE_SHA, "supply_gate")],
+    ids=["pep", "supply_gate"],
+)
+def test_the_untouched_install_passes(package: str, pinned: str, top: str) -> None:
+    import importlib
+
+    from joint_eval.pins import require_installed_pin
+
+    require_installed_pin(package, pinned, importlib.import_module(top))
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+@pytest.mark.parametrize("edit", [False, True], ids=["identical_copy", "edited_copy"])
+def test_a_shadow_package_with_a_copied_dist_info_in_the_working_directory_is_refused(
+    tmp_path: Path, edit: bool
+) -> None:
+    work = tmp_path / "work"
+    _copy_install(work, PEP_PACKAGE, "pep")
+    if edit:
+        with (work / "pep" / "gate.py").open("a", encoding="utf-8") as handle:
+            handle.write("# shadow\n")
+    out = tmp_path / "out" / "acl-paired.json"
+    env = {key: value for key, value in os.environ.items() if not key.startswith("ACL_")}
+    env.pop("PYTHONSAFEPATH", None)
+    done = subprocess.run(
+        [sys.executable, "-m", "joint_eval.paired_runner", "--root", str(ROOT), "--out", str(out)],
+        cwd=work,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "sibling pin not honoured" in done.stderr
+    assert not out.exists()
+
+
+def _site_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, trusted: bool = True
+) -> tuple[Path, types.ModuleType]:
+    """A copy of the installed pep in a site-packages directory the check trusts."""
+    from joint_eval import pins
+
+    site_dir = tmp_path / "lib" / "site-packages"
+    info = _copy_install(site_dir, PEP_PACKAGE, "pep")
+    real_distribution = pins.metadata.distribution
+
+    def _distribution(name: str):
+        if name == PEP_PACKAGE:
+            return metadata.PathDistribution(info)
+        return real_distribution(name)
+
+    monkeypatch.setattr(pins.metadata, "distribution", _distribution)
+    if trusted:
+        monkeypatch.setattr(pins, "_site_dirs", lambda: frozenset({site_dir.resolve()}), raising=False)
+    module = types.ModuleType("pep")
+    module.__file__ = str(site_dir / "pep" / "__init__.py")
+    return site_dir / "pep", module
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+def test_an_untouched_copy_in_a_trusted_site_dir_passes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from joint_eval.pins import require_installed_pin
+
+    _package_dir, module = _site_copy(tmp_path, monkeypatch)
+    require_installed_pin(PEP_PACKAGE, PEP_SHA, module)
+
+
+def _append(package_dir: Path) -> None:
+    with (package_dir / "gate.py").open("a", encoding="utf-8") as handle:
+        handle.write("ALLOW_EVERYTHING = True\n")
+
+
+def _delete(package_dir: Path) -> None:
+    (package_dir / "gate.py").unlink()
+
+
+def _extra_module(package_dir: Path) -> None:
+    (package_dir / "extra.py").write_text("X = 1\n", encoding="utf-8")
+
+
+def _extra_subpackage(package_dir: Path) -> None:
+    (package_dir / "planted").mkdir()
+    (package_dir / "planted" / "__init__.py").write_text("", encoding="utf-8")
+
+
+def _sourceless_bytecode(package_dir: Path) -> None:
+    (package_dir / "planted.pyc").write_bytes(b"\0" * 16)
+
+
+def _swap_for_link(package_dir: Path) -> None:
+    target = package_dir.parent / "elsewhere.py"
+    (package_dir / "gate.py").rename(target)
+    (package_dir / "gate.py").symlink_to(target)
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+@pytest.mark.parametrize(
+    "tamper",
+    [_append, _delete, _extra_module, _extra_subpackage, _sourceless_bytecode, _swap_for_link],
+    ids=["edited", "missing", "extra_module", "extra_subpackage", "sourceless_pyc", "link"],
+)
+def test_an_installed_file_that_does_not_match_record_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tamper
+) -> None:
+    from joint_eval.pins import PinMismatchError, require_installed_pin
+
+    package_dir, module = _site_copy(tmp_path, monkeypatch)
+    tamper(package_dir)
+    with pytest.raises(PinMismatchError, match="RECORD"):
+        require_installed_pin(PEP_PACKAGE, PEP_SHA, module)
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+def test_a_site_packages_directory_this_interpreter_does_not_use_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from joint_eval.pins import PinMismatchError, require_installed_pin
+
+    _package_dir, module = _site_copy(tmp_path, monkeypatch, trusted=False)
+    with pytest.raises(PinMismatchError, match="not a site-packages directory"):
+        require_installed_pin(PEP_PACKAGE, PEP_SHA, module)
+
+
+@pytest.mark.usefixtures("_siblings_installed")
+def test_a_record_in_another_path_entry_than_the_package_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import pep
+
+    from joint_eval.pins import PinMismatchError, require_installed_pin
+
+    _site_copy(tmp_path, monkeypatch)
+    with pytest.raises(PinMismatchError, match="not from the installed"):
+        require_installed_pin(PEP_PACKAGE, PEP_SHA, pep)

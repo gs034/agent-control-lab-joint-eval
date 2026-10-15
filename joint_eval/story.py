@@ -19,6 +19,7 @@ attack success.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -45,6 +46,7 @@ from joint_eval.pins import (
     SUPPLY_GATE_SHA,
     PinMismatchError,
     pin_document,
+    require_installed_location,
     require_installed_pin,
 )
 
@@ -483,6 +485,7 @@ def _step_public(step: StepResult) -> dict[str, Any]:
 
 
 def _import_pep() -> tuple[Any, Any, Any, Any]:
+    _require_pin_before_import(PEP_PACKAGE, PEP_SHA, "pep")
     try:
         from pep.approval import ApprovalStore
         from pep.evaluate import PepRuntime, evaluate
@@ -494,6 +497,7 @@ def _import_pep() -> tuple[Any, Any, Any, Any]:
 
 
 def _import_supply() -> tuple[Any, Any, Any]:
+    _require_pin_before_import(SUPPLY_GATE_PACKAGE, SUPPLY_GATE_SHA, "supply_gate")
     try:
         from supply_gate.gate import evaluate
         from supply_gate.origins import DEFAULT_ALLOWED_ORIGINS
@@ -502,6 +506,26 @@ def _import_supply() -> tuple[Any, Any, Any]:
         raise JointEvalError(f"supply-gate package unavailable: {exc}") from exc
     _require_pin(SUPPLY_GATE_PACKAGE, SUPPLY_GATE_SHA, "supply_gate")
     return evaluate, Verdict, DEFAULT_ALLOWED_ORIGINS
+
+
+def _require_pin_before_import(package: str, pinned: str, module_name: str) -> None:
+    """Check the copy the import would load before any of its code runs (J-7).
+
+    A package that cannot be found is left to the import, which reports it
+    as unavailable. The same checks run again on the imported module.
+    """
+    if module_name in sys.modules:
+        return
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except Exception:  # noqa: BLE001 (the import below reports it)
+        return
+    if spec is None:
+        return
+    try:
+        require_installed_location(package, pinned, module_name, spec.origin)
+    except PinMismatchError as exc:
+        raise JointEvalError(f"sibling pin not honoured: {exc}") from exc
 
 
 def _require_pin(package: str, pinned: str, module_name: str) -> None:
