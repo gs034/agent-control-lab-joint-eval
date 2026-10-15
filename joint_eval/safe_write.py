@@ -30,11 +30,14 @@ from __future__ import annotations
 
 import contextlib
 import errno
+import logging
 import os
 import secrets
 import stat
 from collections.abc import Iterable, Iterator
 from pathlib import Path
+
+_logger = logging.getLogger(__name__)
 
 _POSIX_FD = (
     os.name == "posix"
@@ -154,6 +157,12 @@ class OutputDirectory:
         A file system that cannot fsync a directory (EINVAL, ENOTSUP, ENOTTY)
         is left as is. Any other error, EIO and ENOSPC included, propagates:
         swallowing it would claim durability that was not delivered.
+
+        The fallback path opens the directory before that fsync. EINVAL,
+        ENOTSUP, EOPNOTSUPP, and ENOTTY mean this host cannot open a directory
+        that way, and the open returns quietly. EACCES and EPERM also skip
+        the directory fsync, and a warning is logged so the missing durability
+        is not silent. Any other error from the open is re-raised.
         """
         if self._fd is not None:
             _fsync_directory_fd(self._fd)
@@ -162,7 +171,16 @@ class OutputDirectory:
             return
         try:
             fd = os.open(self.path, os.O_RDONLY | os.O_DIRECTORY)
-        except OSError:
+        except OSError as exc:
+            if exc.errno not in _DIRECTORY_OPEN_QUIET:
+                raise
+            if exc.errno in _DIRECTORY_OPEN_PERMISSION:
+                _logger.warning(
+                    "directory fsync skipped for %s: [%s] %s",
+                    self.path,
+                    errno.errorcode.get(exc.errno, exc.errno),
+                    exc.strerror,
+                )
             return
         try:
             _fsync_directory_fd(fd)
@@ -224,6 +242,23 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
 _FSYNC_UNSUPPORTED = frozenset(
     code for code in (getattr(errno, "EINVAL", None), getattr(errno, "ENOTSUP", None), getattr(errno, "ENOTTY", None)) if code
 )
+
+_DIRECTORY_OPEN_UNSUPPORTED = frozenset(
+    code
+    for code in (
+        getattr(errno, "EINVAL", None),
+        getattr(errno, "ENOTSUP", None),
+        getattr(errno, "EOPNOTSUPP", None),
+        getattr(errno, "ENOTTY", None),
+    )
+    if code
+)
+
+_DIRECTORY_OPEN_PERMISSION = frozenset(
+    code for code in (getattr(errno, "EACCES", None), getattr(errno, "EPERM", None)) if code
+)
+
+_DIRECTORY_OPEN_QUIET = _DIRECTORY_OPEN_UNSUPPORTED | _DIRECTORY_OPEN_PERMISSION
 
 
 def _fsync_directory_fd(fd: int) -> None:

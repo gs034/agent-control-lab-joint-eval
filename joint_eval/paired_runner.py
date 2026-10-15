@@ -942,6 +942,9 @@ def _fixture_file(root: Path, rel: object) -> Path:
     """A fixture *file* named by index data: its folder confined to ``root``, the file itself regular."""
     if not isinstance(rel, str) or not rel.strip() or rel.endswith("/"):
         raise PairedRunnerError(f"fixture refused: fixture file path must name a file: {rel!r}")
+    if "\\" in rel:
+        # A backslash is a separator on Windows; refuse it as contained_dir does for folders.
+        raise PairedRunnerError(f"fixture refused: fixture path must not contain a backslash: {rel!r}")
     parent, _sep, name = rel.rstrip().rpartition("/")
     folder = _folder(root, parent) if parent else _folder(root, ".")
     if name in {"", ".", ".."}:
