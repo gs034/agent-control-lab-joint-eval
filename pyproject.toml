@@ -23,8 +23,8 @@ classifiers = [
 dependencies = [
     # Pinned GitHub main-line tips. Do not vendor sibling trees.
     # Prefer these SHA pins over floating branches.
-    "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@653ee4a819c55bb1fadab2421aa62336352ce2e3",
-    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59",
+    "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@88231949863e10522814ac69a4f4bd335d9e0552",
+    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@009c0cec362505240c7f33cf7c297bb89c234726",
 ]
 
 [project.optional-dependencies]

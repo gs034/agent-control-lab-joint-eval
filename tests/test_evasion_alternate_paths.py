@@ -24,7 +24,7 @@ callable that counts tool entry. Each outcome is classified as one of:
   as ``DENY:envelope_invalid``;
 - ``not_mediated``: the effect never reaches the PEP as an envelope.
 
-Observed on pep ``653ee4a`` (unchanged from ``76c6d4b`` except where noted). The host attests ``lab.demo.agent`` on every
+Observed on pep ``8823194`` (the same as on ``653ee4a``, and as on ``76c6d4b`` except where noted). The host attests ``lab.demo.agent`` on every
 strategy call (pep ADR-0002, ADR-0003):
 
 1. Encoded argument: ``ALLOW``. ``argv`` items are not inspected.

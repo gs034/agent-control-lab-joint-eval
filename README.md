@@ -37,7 +37,7 @@ python3 scripts/lab_brand_wall.py
 
 `python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export and the paired runner reach their output directory by a descriptor walk from `/`: each path component is opened with `O_DIRECTORY | O_NOFOLLOW` relative to the one before it and checked while it is held, so no directory on the way can be swapped after its check. They refuse: a symlink in the output path that another user owns, a directory on the way (the parent or any ancestor) that another user owns or anyone can write without the sticky bit, an output directory owned by another user or world-writable, and an output name that is a link. Each file is written to a new temporary name and renamed into place. A symlinked `eval/` or `eval/joint_story` is refused, and the supply-gate policy and allowlist files are checked before they are handed to supply-gate. The fixture root is the source checkout that directly contains the `joint_eval` package (its `pyproject.toml` must name `agent-control-lab-joint-eval`), or it is given with `--root`. No other parent directory and not the working directory is searched, so a package installed outside its checkout needs `--root`. Error messages and the paired summary write control characters from fixtures (ESC, CR, newline, DEL, C1) as visible `\xNN` escapes.
 
-`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
+`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
 
 ```bash
 python -m joint_eval.paired_runner --out ./paired/acl-paired.json
@@ -72,14 +72,14 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
-| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `653ee4a819c55bb1fadab2421aa62336352ce2e3` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59` |
+| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `88231949863e10522814ac69a4f4bd335d9e0552` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `009c0cec362505240c7f33cf7c297bb89c234726` |
 
 Equivalent pip form:
 
 ```text
-agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@653ee4a819c55bb1fadab2421aa62336352ce2e3
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59
+agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@88231949863e10522814ac69a4f4bd335d9e0552
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@009c0cec362505240c7f33cf7c297bb89c234726
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
