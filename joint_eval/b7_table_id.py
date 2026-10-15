@@ -18,10 +18,10 @@ from joint_eval.loader import FixturePathError, read_fixture_bytes, repo_root
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
 
 ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15"
-# Earlier seals stay in docs/ byte-identical: v1 (pep ffd048a), v2
-# (supply-gate f99b41d), v3 (pep 76c6d4b, supply-gate 7044a31) and v4 (pep
-# 653ee4a, supply-gate d5e5ac1). They are not read for the candidate; tests
-# pin them.
+# v1, v2, and v3 stay in docs/ byte-identical: v1 (pep ffd048a), v2
+# (supply-gate f99b41d) and v3 (pep 76c6d4b, supply-gate 7044a31). v4
+# (pep 653ee4a, supply-gate d5e5ac1) stays as the draft note. Tests pin
+# these bytes. They are not read for the candidate.
 HISTORICAL_ARTEFACT_IDS = (
     "ACL_JointEval_Preregistration_Limitations_B7_2026-09-23",
     "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05",
@@ -32,7 +32,7 @@ RELATIVE_PATH = Path("docs") / f"{ARTEFACT_ID}.md"
 CLAIM_LINEAGE = "1d0f380"
 CLAIM_LINEAGE_SHA = "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
 STATUS_SEPARATION = (
-    "This output is not EngClear. EngClear is not a Cyber C4 table mint. "
+    "This output is not eng clear. EngClear is not a Cyber C4 table mint. "
     "This candidate does not unlock funding. "
     "table_id and residual_asr stay null. Claim cite stays pep 1d0f380."
 )

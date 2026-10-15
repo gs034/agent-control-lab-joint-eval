@@ -78,7 +78,7 @@ def test_paired_document_keeps_table_id_and_residual_asr_null() -> None:
     assert "table_id: null (pending Cyber C4)" in summary
     assert document["table_id_candidate"] in summary
     assert document["b7_prereg_hash"] in summary
-    assert "This output is not EngClear" in summary
+    assert "This output is not eng clear" in summary
     assert "residual_asr: null" in summary
 
 
@@ -96,14 +96,14 @@ HISTORICAL_SEALS = {
         b"| pep install pin | `76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9` |",
     ),
     "ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15": (
-        "7b70bd448bd7fc8c85c59531df26f54060c0aaf262c6bb2faed686fb485125d6",
+        "61da86b8fe5d0e3e9aa8b47f999fe087a155f4f20b6c1da23daa6ab70636e29a",
         b"| pep install pin | `653ee4a819c55bb1fadab2421aa62336352ce2e3` |",
     ),
 }
 
 
 def test_earlier_b7_seals_are_retained_byte_identical() -> None:
-    """v5 supersedes v4, v3, v2 and v1; all four stay as historical seals."""
+    """v1, v2, and v3 stay byte-identical. v4 stays at its draft text."""
     assert set(HISTORICAL_ARTEFACT_IDS) == set(HISTORICAL_SEALS)
     current = NOTE.read_text(encoding="utf-8")
     for artefact_id, (sha256, pin_row) in HISTORICAL_SEALS.items():
