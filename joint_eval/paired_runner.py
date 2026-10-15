@@ -35,6 +35,13 @@ control-off never calls a gate. For an attack row on an arm that runs,
 row it is false. ``delta`` is ``attack_success_off - attack_success_on``
 when both are booleans, otherwise null.
 
+``ok`` is the harness check: false when any control-on DENY still entered
+the tool. ``all_gated_attacks_blocked`` is the outcome check: false when an
+attack row that a gate ran on (control-on not ``stub`` or
+``not_applicable``) was not blocked. The CLI exits 1 when either is false;
+``--allow-unblocked`` lets a run with an unblocked attack exit 0 and still
+records the field false.
+
 Sibling fixtures are read from pinned checkouts (``ACL_PEP_ROOT`` /
 ``ACL_SUPPLY_GATE_ROOT`` or ``--pep-root`` / ``--supply-root``). Those
 trees are not vendored. Each file read from them must be byte-identical
@@ -254,6 +261,10 @@ def format_summary(document: Mapping[str, Any]) -> str:
             "joint-story fixtures. Set ACL_PEP_ROOT and ACL_SUPPLY_GATE_ROOT "
             "to the pinned SHAs for the full measured-corpus fixture set."
         )
+    lines.append(
+        "all gated attacks blocked: "
+        f"{str(document['all_gated_attacks_blocked']).lower()}"
+    )
     lines.append(f"ok: {str(document['ok']).lower()}")
     # Some values come from fixtures; one line each, no control characters.
     return "\n".join(terminal_safe(line) for line in lines) + "\n"
@@ -310,6 +321,15 @@ def main(argv: list[str] | None = None) -> int:
             "Not vendored."
         ),
     )
+    parser.add_argument(
+        "--allow-unblocked",
+        action="store_true",
+        help=(
+            "Exit 0 even when an attack row that a gate ran on was not "
+            "blocked on control-on. The JSON still records "
+            "all_gated_attacks_blocked false."
+        ),
+    )
     args = parser.parse_args(argv)
     try:
         document = run_paired(
@@ -324,6 +344,19 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout.write(format_summary(document))
     if not document["ok"]:
         sys.stderr.write("PAIRED RUNNER FAIL: a DENY path entered the tool\n")
+        return 1
+    unblocked = unblocked_attacks(document["rows"])
+    if unblocked:
+        listing = terminal_safe(", ".join(unblocked))
+        if args.allow_unblocked:
+            sys.stderr.write(
+                f"PAIRED RUNNER WARNING: attack not blocked on control-on "
+                f"(--allow-unblocked): {listing}\n"
+            )
+            return 0
+        sys.stderr.write(
+            f"PAIRED RUNNER FAIL: attack not blocked on control-on: {listing}\n"
+        )
         return 1
     return 0
 
@@ -400,9 +433,31 @@ def _document(
             ),
         },
         "ok": ok,
+        "all_gated_attacks_blocked": not unblocked_attacks(rows),
         "counts": _counts(rows),
         "rows": rows,
     }
+
+
+def unblocked_attacks(rows: list[Mapping[str, Any]]) -> list[str]:
+    """``threat_id/arm`` for each attack cell a gate ran on and did not block.
+
+    A gate ran when control-on is neither ``stub`` nor ``not_applicable``.
+    Blocked means ``attack_success_on`` is false (DENY and the tool not
+    entered). These are the cells counted in ``attack_rows_compared``, plus
+    any whose control-on outcome was not a boolean success.
+    """
+    out: list[str] = []
+    for row in rows:
+        if row["kind"] != "attack":
+            continue
+        for arm in ARM_ORDER:
+            cell = row["arms"][arm]
+            if cell["control_on_decision"] in ("stub", "not_applicable"):
+                continue
+            if cell["attack_success_on"] is not False:
+                out.append(f"{row['threat_id']}/{arm}")
+    return out
 
 
 def _counts(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
