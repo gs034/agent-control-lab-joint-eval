@@ -26,7 +26,7 @@ Each row carries a status as of 14 October 2026. **mitigated**: the pinned sibli
 | PEP monitor-bypass / prose-as-policy | Monitor SAFE / please-allow coax treated as policy | Monitor-bypass class ([arXiv:2609.19587](https://arxiv.org/abs/2609.19587)) | `agent_prose_rejected` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
 | PEP approval-binding mismatch | HITL/TTL approval for one invoke, args substituted before execute | Bind class ([arXiv:2609.21081](https://arxiv.org/abs/2609.21081)) | `approval_binding_mismatch` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
 
-The four mitigated rows rest on pep `76c6d4be` and supply-gate `7044a313`. Those pins predate the current fixes. main does not verify fixture bytes until PR #30 lands.
+The four mitigated rows rest on pep `76c6d4be` and supply-gate `7044a313`. Those pins predate the current fixes. Fixture bytes read from a sibling checkout are proven to be the pinned commit's bytes (#30): the pinned commit and trees are hashed in Python and each fixture's blob id must match, so an edited checkout or a bare `.git/HEAD` is refused.
 
 Citations are arXiv identifiers and pattern names only. This tree does not reproduce papers and does not report attack-success rates.
 
