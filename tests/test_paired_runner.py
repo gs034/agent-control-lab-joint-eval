@@ -22,6 +22,7 @@ from joint_eval.paired_runner import (
     run_paired,
 )
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
+from joint_eval.terminal import escape_controls
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -294,13 +295,15 @@ def test_csv_neutralises_formula_cells_from_corpus_strings(tmp_path: Path, lead:
     json_path, csv_path = write_paired(document, tmp_path / "p.json")
     with csv_path.open(encoding="utf-8", newline="") as handle:
         records = list(csv.DictReader(handle))
+    # J-10: a tab or CR lead keeps its ``'`` and is then written as ``\\xNN``.
+    shown = escape_controls(lead)
     first = [record for record in records if record["threat_id"].endswith(payload[1:])]
     assert len(first) == 3
     for record in first:
-        assert record["threat_id"] == "'" + payload
-        assert record["kind"] == f"'{lead}1+1"
+        assert record["threat_id"] == "'" + shown + payload[1:]
+        assert record["kind"] == f"'{shown}1+1"
     pep = next(record for record in first if record["arm"] == "PEP")
-    assert pep["path"] == f"'{lead}cmd|' /C calc'!A0"
+    assert pep["path"] == f"'{shown}cmd|' /C calc'!A0"
     for record in records:
         for value in record.values():
             assert not value.startswith(("=", "+", "-", "@", "\t", "\r")), record
@@ -371,3 +374,36 @@ def test_allow_unblocked_flag_exits_zero_and_keeps_the_field_false(
     assert "PAIRED RUNNER WARNING: attack not blocked on control-on" in captured.err
     document = json.loads(out.read_text(encoding="utf-8"))
     assert document["all_gated_attacks_blocked"] is False
+
+
+# J-10: control characters in corpus strings are not written raw to the CSV.
+
+_CONTROLS = "\x1b]0;owned\x07\x1b[2J\x00\x7f\x9b31m\x85\r\nok\ttrue"
+
+
+def test_csv_escapes_control_characters_from_corpus_strings(tmp_path: Path) -> None:
+    from joint_eval.paired_runner import write_paired
+
+    document = run_paired(root=ROOT)
+    document["rows"][0]["threat_id"] = "T" + _CONTROLS
+    document["rows"][0]["arms"]["PEP"]["path"] = "p" + _CONTROLS
+    _json_path, csv_path = write_paired(document, tmp_path / "p.json")
+    raw = csv_path.read_bytes().decode("utf-8")
+    body = raw.replace("\r\n", "")
+    bad = [char for char in body if ord(char) < 0x20 or 0x7F <= ord(char) <= 0x9F]
+    assert bad == []
+    shown = "\\x1b]0;owned\\x07\\x1b[2J\\x00\\x7f\\x9b31m\\x85\\x0d\\x0aok\\x09true"
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        records = list(csv.DictReader(handle))
+    first = [record for record in records if record["threat_id"] == "T" + shown]
+    assert len(first) == 3
+    assert next(record for record in first if record["arm"] == "PEP")["path"] == "p" + shown
+
+
+def test_csv_of_the_in_tree_run_has_no_escapes() -> None:
+    """The documented run has no control characters, so the CSV bytes are unchanged."""
+    from joint_eval.paired_runner import _csv_text
+
+    text = _csv_text(run_paired(root=ROOT))
+    assert "\\x" not in text
+    assert "'" not in text

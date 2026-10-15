@@ -85,7 +85,7 @@ from joint_eval.story import (
     _pep_principal,
     _pep_runtime,
 )
-from joint_eval.terminal import terminal_safe
+from joint_eval.terminal import escape_controls, terminal_safe
 
 BRAND = "Agent Control Lab"
 LICENCE = "Apache-2.0"
@@ -1211,8 +1211,12 @@ _CSV_FORMULA_LEADS = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _csv_safe_row(row: Mapping[str, Any]) -> dict[str, Any]:
-    """Prefix ``'`` to any string cell that a spreadsheet would read as a formula.
+    """Neutralise string cells: formula leads get ``'``, control characters become ``\\xNN``.
 
+    The ``'`` is added first, so a cell that started with tab or CR keeps
+    the marker. Then every C0 control (tab, CR and LF included), DEL and C1
+    control is written as a visible ``\\xNN`` escape (J-10), so a cell
+    cannot carry a terminal escape, a line break or a hidden character.
     CSV only: the JSON document keeps the original strings. Numbers (such
     as a negative ``delta``) are not strings and are left as numbers.
     """
@@ -1220,9 +1224,11 @@ def _csv_safe_row(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _csv_safe_cell(value: Any) -> Any:
-    if isinstance(value, str) and value.startswith(_CSV_FORMULA_LEADS):
-        return "'" + value
-    return value
+    if not isinstance(value, str):
+        return value
+    if value.startswith(_CSV_FORMULA_LEADS):
+        value = "'" + value
+    return escape_controls(value)
 
 
 def _csv_bool(value: bool | None) -> str:
