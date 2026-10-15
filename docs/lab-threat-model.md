@@ -26,18 +26,18 @@ State the chain with assumptions. Early prototypes motivate the research questio
 3. An independently protected host control intercepts (supply gate before install/update; PEP at tool invoke).
 4. An evaluator or deployer adopts the verified control.
 
-**How that chain can fail (residual / failure modes):**
+**How that chain can fail (residual / failure modes):** the status column and one pointer to today's install pins (`joint_eval/pins.py`, below) were added on 14 October 2026; the rest of this 22 September synthesis is as written. **accepted residual** means written down and accepted for the reference stubs, **unmitigated** means a route-to-production work item still owes it. Work item codes (L3.1 host-side state binding, L3.6 tamper-evident host log, L3.8 persistent single-use grants, L3.10 kill reach into a running tool, L4.1 provider-executed tools, L4.2 alternate-path fixtures and counts, L4.5 a materialiser so HEAD and hook digests are not caller-supplied, L4.6 omission detection, L5 measured efficacy, L6 tagged release) name items in the owner's route-to-production plan, which is not in this repository; the code is the pointer, the phrase is the meaning.
 
-| Failure mode | Why it breaks the chain |
-| --- | --- |
-| Agent has an alternate path to the protected resource | PEP/supply gate never see the invoke or install |
-| Caller skips `gated_invoke` / omits `observed_head` | Outside the Lab trust domain; no enforcement |
-| Hostile process writes PEP memory/disk or HaltStore | Policy bytes and halt state are not confidentiality-protected against equivalent-access attackers |
-| Kill arrives after tool entry has started | In-process late-effect fence does not unwind a callable already entered |
-| Process-external provider callback without re-entry | Fence is process-local on `PepRuntime`; not a cross-process cut certificate |
-| Supply adapters use caller-supplied digests only | Stub is not an end-to-end live installer verifier |
-| Monitors alone treated as policy | Monitor SAFE/allow coax is not an allow authority; if a deployer trusts scores as policy, Lab frames that as residual risk outside these planes |
-| No adoption | Existence-proof without evaluator/deployer use does not reduce real-world catastrophic risk |
+| Failure mode | Why it breaks the chain | Status (14 Oct 2026) |
+| --- | --- | --- |
+| Agent has an alternate path to the protected resource | PEP/supply gate never see the invoke or install | **unmitigated**: alternate-path fixtures and counts are owed (L4.2); provider-executed tools are owed as a named residual (L4.1) |
+| Caller skips `gated_invoke` / omits `observed_head` | Outside the Lab trust domain; no enforcement | accepted residual: outside the trust domain by design |
+| Hostile process writes PEP memory/disk or HaltStore | Policy bytes and halt state are not confidentiality-protected against equivalent-access attackers | accepted residual |
+| Kill arrives after tool entry has started | In-process late-effect fence does not unwind a callable already entered | **unmitigated** on the reference host (kill reach, L3.10) |
+| Process-external provider callback without re-entry | Fence is process-local on `PepRuntime`; not a cross-process cut certificate | **unmitigated** (L4.1) |
+| Supply adapters use caller-supplied digests only | Stub is not an end-to-end live installer verifier | **unmitigated**: digests are caller-supplied until a materialiser exists (L4.5) |
+| Monitors alone treated as policy | Monitor SAFE/allow coax is not an allow authority; if a deployer trusts scores as policy, Lab frames that as residual risk outside these planes | accepted residual: outside these planes |
+| No adoption | Existence-proof without evaluator/deployer use does not reduce real-world catastrophic risk | **unmitigated**: no measured efficacy yet, no tagged release yet (L5, L6) |
 
 ## Assets (Lab-wide)
 
@@ -173,7 +173,7 @@ This Lab-wide model and the public artefacts do **not** claim:
 
 ## Evidence pointers
 
-Plane pins are the commits this synthesis was written against on 22 Sep 2026. They are evidence pointers for diligence. The pep commit `1d0f380` remains the public claim cite for the PEP plane (see [`measured-corpus-v0.md`](measured-corpus-v0.md)); the later pep tip below adds corpus rows and documentation on the same lineage.
+Plane pins are the commits this synthesis was written against on 22 Sep 2026 and are left as written; the pins the harness installs today are in `joint_eval/pins.py`. They are evidence pointers for diligence. The pep commit `1d0f380` remains the public claim cite for the PEP plane (see [`measured-corpus-v0.md`](measured-corpus-v0.md)); the later pep tip below adds corpus rows and documentation on the same lineage.
 
 | Artefact | Public URL | Tip | What it supports |
 | --- | --- | --- | --- |
