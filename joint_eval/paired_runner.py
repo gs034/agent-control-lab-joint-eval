@@ -78,6 +78,7 @@ from joint_eval.story import (
     _pep_principal,
     _pep_runtime,
 )
+from joint_eval.terminal import terminal_safe
 
 BRAND = "Agent Control Lab"
 LICENCE = "Apache-2.0"
@@ -254,7 +255,8 @@ def format_summary(document: Mapping[str, Any]) -> str:
             "to the pinned SHAs for the full measured-corpus fixture set."
         )
     lines.append(f"ok: {str(document['ok']).lower()}")
-    return "\n".join(lines) + "\n"
+    # Some values come from fixtures; one line each, no control characters.
+    return "\n".join(terminal_safe(line) for line in lines) + "\n"
 
 
 def write_paired(document: Mapping[str, Any], out: Path) -> tuple[Path, Path]:
@@ -317,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         write_paired(document, args.out)
     except (PairedRunnerError, JointEvalError, OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        sys.stderr.write(f"paired-runner unavailable: {exc}\n")
+        sys.stderr.write(f"paired-runner unavailable: {terminal_safe(str(exc))}\n")
         return 1
     sys.stdout.write(format_summary(document))
     if not document["ok"]:

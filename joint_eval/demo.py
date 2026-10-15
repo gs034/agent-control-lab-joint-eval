@@ -12,6 +12,7 @@ from pathlib import Path
 from joint_eval.loader import dumps_canonical
 from joint_eval.pins import pin_document
 from joint_eval.story import JointEvalError, dumps_story, run_joint_story
+from joint_eval.terminal import terminal_safe
 
 
 def dumps_story_unavailable(detail: str) -> str:
@@ -51,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = run_joint_story(root=args.root)
     except (JointEvalError, OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        sys.stderr.write(f"joint-eval unavailable: {exc}\n")
+        sys.stderr.write(f"joint-eval unavailable: {terminal_safe(str(exc))}\n")
         sys.stdout.write(dumps_story_unavailable(str(exc)))
         return 1
     sys.stdout.write(dumps_story(result))
