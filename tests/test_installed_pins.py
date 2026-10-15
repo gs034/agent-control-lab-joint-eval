@@ -67,7 +67,7 @@ class _Dist:
             return self._direct_url
         return self._real.read_text(name)
 
-    def locate_file(self, path):  # noqa: ANN001, ANN201
+    def locate_file(self, path):
         return self._real.locate_file(path)
 
 
@@ -76,7 +76,7 @@ def _fake_direct_url(monkeypatch: pytest.MonkeyPatch, package: str, direct_url: 
 
     real_distribution = pins.metadata.distribution
 
-    def _distribution(name: str):  # noqa: ANN202
+    def _distribution(name: str):
         dist = real_distribution(name)
         if name == package:
             return _Dist(dist, direct_url)

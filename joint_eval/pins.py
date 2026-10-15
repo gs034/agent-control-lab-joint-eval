@@ -8,8 +8,8 @@ This harness does not vendor pep or supply-gate source trees.
 
 from __future__ import annotations
 
-import importlib.metadata as metadata
 import json
+from importlib import metadata
 from pathlib import Path
 from types import ModuleType
 
