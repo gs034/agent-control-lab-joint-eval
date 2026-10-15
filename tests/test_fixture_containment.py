@@ -123,6 +123,49 @@ def test_repo_root_does_not_consult_the_working_directory(
         loader.repo_root()
 
 
+def _plant_fixture_root(folder: Path) -> None:
+    (folder / "eval" / "joint_story").mkdir(parents=True)
+    (folder / "eval" / "joint_story" / "index.json").write_text("{}", encoding="utf-8")
+
+
+def _pyproject(folder: Path, name: str) -> None:
+    (folder / "pyproject.toml").write_text(f'[project]\nname = "{name}"\n', encoding="utf-8")
+
+
+def test_repo_root_ignores_a_fixture_root_in_a_shared_ancestor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # J-2: a venv under a shared folder must not adopt that folder's eval/.
+    _plant_fixture_root(tmp_path)
+    _pyproject(tmp_path, "agent-control-lab-joint-eval")
+    installed = tmp_path / "venv" / "lib" / "site-packages" / "joint_eval" / "loader.py"
+    installed.parent.mkdir(parents=True)
+    monkeypatch.setattr(loader, "__file__", str(installed))
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+
+
+def test_repo_root_needs_this_projects_pyproject(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkout = tmp_path / "checkout"
+    _plant_fixture_root(checkout)
+    package = checkout / "joint_eval" / "loader.py"
+    package.parent.mkdir(parents=True)
+    monkeypatch.setattr(loader, "__file__", str(package))
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+    _pyproject(checkout, "some-other-project")
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+    _pyproject(checkout, "agent-control-lab-joint-eval")
+    assert loader.repo_root() == checkout.resolve()
+
+
+def test_repo_root_is_this_checkout() -> None:
+    assert loader.repo_root() == ROOT
+
+
 # Export: sidecar symlinks (finding: sidecar files read through symlinks)
 
 
