@@ -123,6 +123,49 @@ def test_repo_root_does_not_consult_the_working_directory(
         loader.repo_root()
 
 
+def _plant_fixture_root(folder: Path) -> None:
+    (folder / "eval" / "joint_story").mkdir(parents=True)
+    (folder / "eval" / "joint_story" / "index.json").write_text("{}", encoding="utf-8")
+
+
+def _pyproject(folder: Path, name: str) -> None:
+    (folder / "pyproject.toml").write_text(f'[project]\nname = "{name}"\n', encoding="utf-8")
+
+
+def test_repo_root_ignores_a_fixture_root_in_a_shared_ancestor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # J-2: a venv under a shared folder must not adopt that folder's eval/.
+    _plant_fixture_root(tmp_path)
+    _pyproject(tmp_path, "agent-control-lab-joint-eval")
+    installed = tmp_path / "venv" / "lib" / "site-packages" / "joint_eval" / "loader.py"
+    installed.parent.mkdir(parents=True)
+    monkeypatch.setattr(loader, "__file__", str(installed))
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+
+
+def test_repo_root_needs_this_projects_pyproject(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkout = tmp_path / "checkout"
+    _plant_fixture_root(checkout)
+    package = checkout / "joint_eval" / "loader.py"
+    package.parent.mkdir(parents=True)
+    monkeypatch.setattr(loader, "__file__", str(package))
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+    _pyproject(checkout, "some-other-project")
+    with pytest.raises(FileNotFoundError, match="--root"):
+        loader.repo_root()
+    _pyproject(checkout, "agent-control-lab-joint-eval")
+    assert loader.repo_root() == checkout.resolve()
+
+
+def test_repo_root_is_this_checkout() -> None:
+    assert loader.repo_root() == ROOT
+
+
 # Export: sidecar symlinks (finding: sidecar files read through symlinks)
 
 
@@ -687,3 +730,69 @@ def test_fixture_file_refuses_a_backslash_in_the_name(tmp_path: Path, rel: str) 
     (root / "f").mkdir(parents=True)
     with pytest.raises(PairedRunnerError, match="backslash"):
         _fixture_file(root, rel)
+
+
+# Terminal output (J-6: fixture strings carried raw escape sequences to stderr)
+
+_ESCAPES = "\x1b]0;owned\x07\x1b[2J\x9b31m\x7f\r\nok: true\n"
+
+
+def _assert_no_controls(text: str) -> None:
+    for char in text:
+        code = ord(char)
+        assert char == "\n" or not (code < 0x20 or code == 0x7F or 0x80 <= code <= 0x9F), repr(text)
+
+
+def test_paired_runner_stderr_escapes_fixture_controls(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from joint_eval import paired_runner
+
+    root = _tree(tmp_path)
+    _set_corpus_path(root, "eval/joint_story/", "../" + _ESCAPES)
+    assert paired_runner.main(["--root", str(root), "--out", str(tmp_path / "o" / "p.json")]) == 1
+    err = capsys.readouterr().err
+    assert "\\x1b]0;owned\\x07\\x1b[2J\\x9b31m\\x7f\\x0d\\x0aok: true\\x0a" in err
+    assert err.count("\n") == 1
+    _assert_no_controls(err)
+
+
+def test_demo_and_export_stderr_escape_fixture_controls(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from joint_eval import control_arena_export, demo
+
+    root = _tree(tmp_path)
+    _set_dir(root, _first_row_dir(root), "../" + _ESCAPES)
+    assert demo.main(["--root", str(root)]) == 1
+    captured = capsys.readouterr()
+    assert "\\x1b]0;owned" in captured.err
+    assert captured.err.count("\n") == 1
+    _assert_no_controls(captured.err)
+    _assert_no_controls(captured.out)
+    assert control_arena_export.main(["--root", str(root), "--out", str(tmp_path / "x")]) == 1
+    err = capsys.readouterr().err
+    assert "\\x1b]0;owned" in err
+    assert err.count("\n") == 1
+    _assert_no_controls(err)
+
+
+def test_paired_summary_escapes_controls() -> None:
+    from joint_eval.paired_runner import format_summary
+
+    document = run_paired(root=ROOT)
+    plain = format_summary(document)
+    document["claim_cite"]["lineage"] = "1d0f380" + _ESCAPES
+    text = format_summary(document)
+    _assert_no_controls(text)
+    assert text.count("\n") == plain.count("\n")
+    assert "claim cite: 1d0f380\\x1b]0;owned" in text
+
+
+def test_terminal_safe_keeps_tab_and_optional_newline() -> None:
+    from joint_eval.terminal import terminal_safe
+
+    assert terminal_safe("a\tb\nc") == "a\tb\\x0ac"
+    assert terminal_safe("a\tb\nc", keep_newlines=True) == "a\tb\nc"
+    assert terminal_safe("café ✓") == "café ✓"
+    assert terminal_safe("\x00\x1b\x7f\x80\x9f\xa0") == "\\x00\\x1b\\x7f\\x80\\x9f\xa0"

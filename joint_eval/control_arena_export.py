@@ -36,6 +36,7 @@ from joint_eval.loader import (
     story_dir,
 )
 from joint_eval.safe_write import OutputPathError, output_directory
+from joint_eval.terminal import terminal_safe
 
 # Same instant as joint_eval.story.CLOCK. Kept here so this writer does not
 # import the live story runner.
@@ -181,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         document = write_control_arena_export(args.out, root=args.root)
     except (ControlArenaExportError, OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
-        sys.stderr.write(f"control-arena export failed: {exc}\n")
+        sys.stderr.write(f"control-arena export failed: {terminal_safe(str(exc))}\n")
         return 1
     sys.stdout.write(
         dumps_canonical(

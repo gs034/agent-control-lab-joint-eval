@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import tomllib
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
@@ -22,18 +23,38 @@ class FixturePathError(ValueError):
     """A fixture path leaves its root, is a link, or is not a plain file or directory."""
 
 
-def repo_root() -> Path:
-    """The source tree that holds this package's fixtures.
+PROJECT_NAME = "agent-control-lab-joint-eval"
 
-    The working directory is not consulted: an installed package run in a
-    directory someone else prepared must not pick up that directory's
-    fixtures. Pass ``--root`` to run against another tree.
+
+def repo_root() -> Path:
+    """The source checkout that holds this package's fixtures.
+
+    Only one directory is considered: the one that directly contains this
+    package (``<checkout>/joint_eval/loader.py``). It counts as this
+    project's checkout only when its ``pyproject.toml`` names this project
+    and it holds ``eval/joint_story/index.json``. Other parent directories
+    are never searched, so an installed package under ``/tmp/venv`` does not
+    pick up a shared ``/tmp/eval``. The working directory is not consulted
+    either. Pass ``--root`` to run against another tree, or when the package
+    is installed outside its checkout.
     """
-    here = Path(__file__).resolve()
-    for candidate in here.parents:
-        if (candidate / "eval" / "joint_story" / INDEX_NAME).is_file():
-            return candidate
-    raise FileNotFoundError("eval/joint_story/index.json not found next to joint_eval; pass --root")
+    candidate = Path(__file__).resolve().parent.parent
+    if _is_this_checkout(candidate):
+        return candidate
+    raise FileNotFoundError(
+        "joint_eval is not running from its source checkout "
+        f"({PROJECT_NAME} pyproject.toml and eval/joint_story/index.json beside the package); pass --root"
+    )
+
+
+def _is_this_checkout(candidate: Path) -> bool:
+    try:
+        project = tomllib.loads(read_fixture_text(candidate / "pyproject.toml")).get("project")
+    except (OSError, ValueError):
+        return False
+    if not isinstance(project, dict) or project.get("name") != PROJECT_NAME:
+        return False
+    return (candidate / "eval" / "joint_story" / INDEX_NAME).is_file()
 
 
 def story_dir(root: Path | None = None) -> Path:

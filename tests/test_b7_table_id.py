@@ -91,11 +91,15 @@ HISTORICAL_SEALS = {
         "3b6b70b798562937f465e52a85065edf96da5b319219893032d9e5b3bd72aaaa",
         b"| supply-gate install pin | `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8` |",
     ),
+    "ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05": (
+        "5cd055d846d57fc40a3ba926732ed9bf82ffc7dedf5b37753bd8fa6812fbb391",
+        b"| pep install pin | `76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9` |",
+    ),
 }
 
 
 def test_earlier_b7_seals_are_retained_byte_identical() -> None:
-    """v3 supersedes v2, which superseded v1; both stay as historical seals."""
+    """v4 supersedes v3, which superseded v2 and v1; all three stay as historical seals."""
     assert set(HISTORICAL_ARTEFACT_IDS) == set(HISTORICAL_SEALS)
     current = NOTE.read_text(encoding="utf-8")
     for artefact_id, (sha256, pin_row) in HISTORICAL_SEALS.items():

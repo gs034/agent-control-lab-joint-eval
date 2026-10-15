@@ -19,6 +19,7 @@ attack success.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,7 +38,15 @@ from joint_eval.loader import (
     read_fixture_text,
     story_dir,
 )
-from joint_eval.pins import pin_document
+from joint_eval.pins import (
+    PEP_PACKAGE,
+    PEP_SHA,
+    SUPPLY_GATE_PACKAGE,
+    SUPPLY_GATE_SHA,
+    PinMismatchError,
+    pin_document,
+    require_installed_pin,
+)
 
 STORY_ID = "acl-joint-eval-existence-proof-001"
 BRAND = "Agent Control Lab"
@@ -480,6 +489,7 @@ def _import_pep() -> tuple[Any, Any, Any, Any]:
         from pep.gate import gated_invoke
     except Exception as exc:  # noqa: BLE001 — fail-closed import boundary
         raise JointEvalError(f"pep package unavailable: {exc}") from exc
+    _require_pin(PEP_PACKAGE, PEP_SHA, "pep")
     return evaluate, PepRuntime, gated_invoke, ApprovalStore
 
 
@@ -490,4 +500,13 @@ def _import_supply() -> tuple[Any, Any, Any]:
         from supply_gate.reasons import Verdict
     except Exception as exc:  # noqa: BLE001 — fail-closed import boundary
         raise JointEvalError(f"supply-gate package unavailable: {exc}") from exc
+    _require_pin(SUPPLY_GATE_PACKAGE, SUPPLY_GATE_SHA, "supply_gate")
     return evaluate, Verdict, DEFAULT_ALLOWED_ORIGINS
+
+
+def _require_pin(package: str, pinned: str, module_name: str) -> None:
+    """Outputs state the pins, so the imported sibling must be the pinned commit (J-5)."""
+    try:
+        require_installed_pin(package, pinned, sys.modules[module_name])
+    except PinMismatchError as exc:
+        raise JointEvalError(f"sibling pin not honoured: {exc}") from exc

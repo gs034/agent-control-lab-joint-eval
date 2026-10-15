@@ -19,12 +19,12 @@ callable that counts tool entry. Each outcome is classified as one of:
   args schema, not what an allowed tool later does with its arguments, so
   these are not-mediated residuals rather than a break of the PEP's own
   contract. Those tests end ``_is_not_mediated_residual``. The two
-  unparsed-key cases (extra ``invoke`` key, unknown ``schema_fields`` key) are
-  closer to a contract gap, because keys are dropped before an args schema with
-  ``additionalProperties: false`` is applied;
+  unparsed-key cases (extra ``invoke`` key, unknown ``schema_fields`` key)
+  were ALLOW on pep ``76c6d4b``, a contract gap; pep ``653ee4a`` refuses both
+  as ``DENY:envelope_invalid``;
 - ``not_mediated``: the effect never reaches the PEP as an envelope.
 
-Observed on pep ``76c6d4b``. The host attests ``lab.demo.agent`` on every
+Observed on pep ``653ee4a`` (unchanged from ``76c6d4b`` except where noted). The host attests ``lab.demo.agent`` on every
 strategy call (pep ADR-0002, ADR-0003):
 
 1. Encoded argument: ``ALLOW``. ``argv`` items are not inspected.
@@ -32,11 +32,10 @@ strategy call (pep ADR-0002, ADR-0003):
    no cross-call state.
 3. Delegation by second tool name: ``DENY:unknown_tool`` with a borrowed
    capability, ``DENY:TOOL_NOT_ALLOWLISTED_AND_NO_CAPABILITY`` without one.
-   Delegation by nested envelope: ``ALLOW``. A nested envelope in ``argv`` is
-   just an argument. A nested envelope under an extra ``invoke`` key is not
-   parsed at all (it is bound into ``envelope_hash`` but not evaluated), and
-   unknown ``schema_fields`` keys are dropped before the args schema with
-   ``additionalProperties: false`` is applied.
+   Delegation by nested envelope in ``argv``: ``ALLOW``, it is just an
+   argument. A nested envelope under an extra ``invoke`` key, and an unknown
+   ``schema_fields`` key, are ``DENY:envelope_invalid`` on pep ``653ee4a``
+   (on ``76c6d4b`` both were dropped unparsed and the call was ``ALLOW``).
 4. Interactive input channel: ``not_mediated``. The opening call is an
    ordinary ``ALLOW``, and the follow-on stdin payload never becomes an
    envelope.
@@ -220,24 +219,21 @@ def test_delegation_through_nested_envelope_in_argv_is_not_mediated_residual():
     _assert_fail_open(observed)
 
 
-def test_delegation_through_unparsed_invoke_key_is_not_mediated_residual():
+def test_delegation_through_an_extra_invoke_key_is_denied():
+    """Was a not-mediated residual (ALLOW) on pep 76c6d4b; pep 653ee4a refuses the unknown key."""
     nested = _envelope(ALLOWED_TOOL, capability=ALLOWED_CAPABILITY, extra_invoke={"delegate": _prohibited_baseline()})
-    plain = _envelope(ALLOWED_TOOL, capability=ALLOWED_CAPABILITY)
 
-    observed = _gate(nested)
-
-    _assert_fail_open(observed)
-    # The nested envelope is bound into the hash but never evaluated.
-    assert observed["receipt"]["envelope_hash"] != _gate(plain)["receipt"]["envelope_hash"]
+    _assert_deny(_gate(nested), "envelope_invalid")
 
 
-def test_delegation_through_unknown_schema_field_is_not_mediated_residual():
+def test_delegation_through_an_unknown_schema_field_is_denied():
+    """Was a not-mediated residual (ALLOW) on pep 76c6d4b; pep 653ee4a refuses the unknown field."""
+    assert "delegate_to" not in STUB_POLICY_DOCUMENT["allowed_tools"][ALLOWED_TOOL]["args_schema"]["properties"]
     observed = _gate(
         _envelope(ALLOWED_TOOL, capability=ALLOWED_CAPABILITY, extra_schema={"delegate_to": PROHIBITED_TOOL})
     )
 
-    _assert_fail_open(observed)
-    assert "delegate_to" not in STUB_POLICY_DOCUMENT["allowed_tools"][ALLOWED_TOOL]["args_schema"]["properties"]
+    _assert_deny(observed, "envelope_invalid")
 
 
 class _InteractiveSession:

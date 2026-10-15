@@ -21,14 +21,26 @@ Each row carries a status as of 14 October 2026. **mitigated**: the pinned sibli
 
 | Joint step | Class | Citation / pattern name | Existence-proof DENY | Status (14 Oct 2026) |
 | --- | --- | --- | --- | --- |
-| Supply Plugin4Shell-class | Marketplace/plugin pin that would satisfy a naive SHA pin on a mutable ref / swapped tree, plus skip-verify prose | Plugin4Shell-class (threat pattern name, not a vendor product) | `prose_rejected_as_policy` + `head_mismatch` | mitigated (existence proof at supply-gate `7044a313`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
-| Supply pin-without-verify | Pin present, post-checkout HEAD omitted | Plugin4Shell-class family (verify skipped) | `verify_missing` | mitigated (existence proof at supply-gate `7044a313`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
-| PEP monitor-bypass / prose-as-policy | Monitor SAFE / please-allow coax treated as policy | Monitor-bypass class ([arXiv:2609.19587](https://arxiv.org/abs/2609.19587)) | `agent_prose_rejected` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
-| PEP approval-binding mismatch | HITL/TTL approval for one invoke, args substituted before execute | Bind class ([arXiv:2609.21081](https://arxiv.org/abs/2609.21081)) | `approval_binding_mismatch` | mitigated (existence proof at pep `76c6d4be`; pins pep `76c6d4be` and supply-gate `7044a313` predate the current fixes) |
+| Supply Plugin4Shell-class | Marketplace/plugin pin that would satisfy a naive SHA pin on a mutable ref / swapped tree, plus skip-verify prose | Plugin4Shell-class (threat pattern name, not a vendor product) | `prose_rejected_as_policy` + `head_mismatch` | mitigated (existence proof at supply-gate `d5e5ac11`; pins pep `653ee4a8` and supply-gate `d5e5ac11` predate the current fixes) |
+| Supply pin-without-verify | Pin present, post-checkout HEAD omitted | Plugin4Shell-class family (verify skipped) | `verify_missing` | mitigated (existence proof at supply-gate `d5e5ac11`; pins pep `653ee4a8` and supply-gate `d5e5ac11` predate the current fixes) |
+| PEP monitor-bypass / prose-as-policy | Monitor SAFE / please-allow coax treated as policy | Monitor-bypass class ([arXiv:2609.19587](https://arxiv.org/abs/2609.19587)) | `agent_prose_rejected` | mitigated (existence proof at pep `653ee4a8`; pins pep `653ee4a8` and supply-gate `d5e5ac11` predate the current fixes) |
+| PEP approval-binding mismatch | HITL/TTL approval for one invoke, args substituted before execute | Bind class ([arXiv:2609.21081](https://arxiv.org/abs/2609.21081)) | `approval_binding_mismatch` | mitigated (existence proof at pep `653ee4a8`; pins pep `653ee4a8` and supply-gate `d5e5ac11` predate the current fixes) |
 
-The four mitigated rows rest on pep `76c6d4be` and supply-gate `7044a313`. Those pins predate the current fixes. main does not verify fixture bytes until PR #30 lands.
+The four mitigated rows rest on pep `653ee4a8` and supply-gate `d5e5ac11`, the same sibling commits the console pins (moved from `76c6d4be` and `7044a313` on 15 October 2026 so that the J-5 installed-pin check holds on both). Fixture bytes read from a sibling checkout are proven to be the pinned commit's bytes (#30): the pinned commit and trees are hashed in Python and each fixture's blob id must match, so an edited checkout or a bare `.git/HEAD` is refused.
 
 Citations are arXiv identifiers and pattern names only. This tree does not reproduce papers and does not report attack-success rates.
+
+## Harness findings
+
+These rows are about the harness itself, not about a sibling plane. **mitigated** here means this tree's code closes the finding and a named test fails without the fix; **accepted residual** names what is left.
+
+| Finding | Class | Mitigation | Status (15 Oct 2026) |
+| --- | --- | --- | --- |
+| J-2 | Fixture root picked up from a shared parent directory (`/tmp/eval` used without `--root` when the venv sits under `/tmp`) | Only the directory that directly contains the `joint_eval` package is considered, and only when its `pyproject.toml` names `agent-control-lab-joint-eval` and it holds `eval/joint_story/index.json`; otherwise `--root` is required (`tests/test_fixture_containment.py::test_repo_root_ignores_a_fixture_root_in_a_shared_ancestor`) | mitigated |
+| J-3 | Output redirected by swapping a directory above the output's parent between check and open | Descriptor walk from `/` with `O_DIRECTORY \| O_NOFOLLOW` per component; each directory is checked while held, symlinks are followed only when this user or root owns them, and every directory on the walk must be owned by this user or root and not world-writable without the sticky bit (`tests/test_output_walk.py`, including a 400-try race) | mitigated on POSIX; accepted residual on hosts without `dir_fd` support, which keep the by-path writer |
+| J-4 | CSV formula injection through a corpus `threat_id` or other string cell | The paired CSV writer prefixes `'` to any string cell starting with `=`, `+`, `-`, `@`, tab or CR; JSON keeps the authored string (`tests/test_paired_runner.py::test_csv_neutralises_formula_cells_from_corpus_strings`) | mitigated |
+| J-5 | Installed sibling packages not checked against the pins the output states | Before the demo or paired runner runs, each sibling's `direct_url.json` `commit_id` must equal the pin and the imported module must be a file that distribution installed; otherwise exit 1 with no output (`tests/test_installed_pins.py`) | mitigated; accepted residual: `direct_url.json` is pip's own record and is trusted as written |
+| J-6 | Raw terminal escape sequences from fixture strings reach stderr | Error text and the paired summary write C0 controls except tab, DEL, and C1 controls (ESC included) as `\xNN`; newline is escaped inside a message (`tests/test_fixture_containment.py::test_paired_runner_stderr_escapes_fixture_controls`) | mitigated for the messages the entry points write; accepted residual: an exception type the entry points do not catch still prints Python's own traceback |
 
 ## Fail-closed
 

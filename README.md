@@ -35,9 +35,9 @@ pytest
 python3 scripts/lab_brand_wall.py
 ```
 
-`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export and the paired runner open their output directory by descriptor and refuse: a symlink in the output path that another user owns, a parent another user owns or anyone can write without the sticky bit, an output directory owned by another user or world-writable, and an output name that is a link. Each file is written to a new temporary name and renamed into place. A symlinked `eval/` or `eval/joint_story` is refused, and the supply-gate policy and allowlist files are checked before they are handed to supply-gate. The fixture root is found next to the `joint_eval` package or given with `--root`; the working directory is not searched.
+`python -m joint_eval.control_arena_export` writes a ControlArena directory export (`trajectory.jsonl`, `tools.json`, `metadata.json`) from `eval/joint_story/` fixtures and frozen receipts. It does not import ControlArena or Inspect, does not run a setting, and does not measure attack success. See [`docs/control-arena-export.md`](docs/control-arena-export.md). Fixture folders and sidecar files must stay inside the fixture root: an index `dir` or corpus `path` that is absolute, uses `..`, or passes through a symlink is refused, and a symlinked or non-regular sidecar file is refused. The export and the paired runner reach their output directory by a descriptor walk from `/`: each path component is opened with `O_DIRECTORY | O_NOFOLLOW` relative to the one before it and checked while it is held, so no directory on the way can be swapped after its check. They refuse: a symlink in the output path that another user owns, a directory on the way (the parent or any ancestor) that another user owns or anyone can write without the sticky bit, an output directory owned by another user or world-writable, and an output name that is a link. Each file is written to a new temporary name and renamed into place. A symlinked `eval/` or `eval/joint_story` is refused, and the supply-gate policy and allowlist files are checked before they are handed to supply-gate. The fixture root is the source checkout that directly contains the `joint_eval` package (its `pyproject.toml` must name `agent-control-lab-joint-eval`), or it is given with `--root`. No other parent directory and not the working directory is searched, so a package installed outside its checkout needs `--root`. Error messages and the paired summary write control characters from fixtures (ESC, CR, newline, DEL, C1) as visible `\xNN` escapes.
 
-`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
+`python -m joint_eval.paired_runner` runs the same envelope twice (control-off, then control-on) on the monitor, PEP, and stack arms and writes a JSON table plus a CSV. Counts are **paired existence / provisional attack-success counts** pending a Cyber `table_id` under C4. They are not a residual ASR and not a letters ASR. `table_id` and `residual_asr` stay null. `table_id_candidate` and `b7_prereg_hash` are provisional addresses of the frozen B7 note ([`docs/ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15.md`](docs/ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15.md); earlier seals v1 and v2 are kept beside it). Soft is not EngClear. EngClear is not a C4 table mint. The candidate does not unlock funding. `runner_implemented` is true on that document only. The measured-corpus seed keeps `runner_implemented` false. Claim cite stays pep `1d0f380`. This is not a ControlArena setting and not an Inspect loop.
 
 ```bash
 python -m joint_eval.paired_runner --out ./paired/acl-paired.json
@@ -51,7 +51,18 @@ export ACL_SUPPLY_GATE_ROOT=/path/to/agent-control-lab-supply-gate
 python -m joint_eval.paired_runner --out ./paired/acl-paired.json
 ```
 
-`ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A short summary goes to stdout.
+`ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A CSV string cell that starts with `=`, `+`, `-`, `@`, tab or CR gets a leading `'` so a spreadsheet does not read it as a formula; the JSON keeps the original string. A short summary goes to stdout.
+
+### Sibling pin check
+
+A `HEAD` equal to the pin is not enough on its own: a `.git/HEAD` file that names the pin and holds no objects would pass, and so would a real checkout at the pin with an edited fixture. `joint_eval/sibling_pin.py` checks the bytes the runner uses:
+
+- The checkout needs a `.git` directory (a `.git` file or link is refused). Its repository-local git config may set only a short list of inert keys (`core.*` format and filemode keys, `remote.*.url`, `remote.*.fetch`, `branch.*.remote`, `branch.*.merge`). Any other key, such as `extensions.partialClone`, `remote.*.promisor`, `core.fsmonitor`, `include.path` or a filter, is refused before git reads an object. A SHA-256 repository is refused.
+- The pinned commit and each tree on the way to a fixture are read with `git cat-file` and hashed in Python. An object whose bytes do not hash to its id is refused, so a planted loose object cannot stand in for the pinned tree.
+- Each fixture file is read from the worktree, its git blob id is computed from the exact bytes read, and that id must equal the blob id the pinned tree lists for the path. A file the pinned tree does not list is refused when the runner looks for it, and so is a listed file the checkout lacks. The supply-gate update policy and allowlist are passed to `supply_gate` as private copies of the checked bytes.
+- Git runs with `--git-dir`, no system or global config, inherited `GIT_*` variables dropped, hooks and fsmonitor off, a timeout, and `GIT_ALLOW_PROTOCOL` set to a name that is not a protocol, so no transport or remote helper can start. Only `config --list`, `rev-parse` and `cat-file` run.
+
+Any failure stops the run with a `paired-runner unavailable` message. No table is written.
 
 `python -m joint_eval.demo` prints the joint story document (pins, DENY receipts, coverage limits) and exits 0 only when every step DENY’d without invoke.
 
@@ -61,21 +72,21 @@ Sibling code is pulled as ordinary Python distributions via **PEP 508 direct URL
 
 | Package | Repository | Pinned SHA |
 | --- | --- | --- |
-| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9` |
-| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `7044a313dffc60e08b26366950328f9025c56310` |
+| `agent-control-lab-pep` | [gs034/agent-control-lab-pep](https://github.com/gs034/agent-control-lab-pep) | `653ee4a819c55bb1fadab2421aa62336352ce2e3` |
+| `agent-control-lab-supply-gate` | [gs034/agent-control-lab-supply-gate](https://github.com/gs034/agent-control-lab-supply-gate) | `d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59` |
 
 Equivalent pip form:
 
 ```text
-agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9
-agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@7044a313dffc60e08b26366950328f9025c56310
+agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@653ee4a819c55bb1fadab2421aa62336352ce2e3
+agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59
 ```
 
 That clones the commit into the environment’s `site-packages`. This repo keeps only **joint** fixtures under `eval/joint_story/` and calls public APIs (`pep.evaluate` / `pep.gated_invoke`, `supply_gate.evaluate`). Do not copy `pep/` or `supply_gate/` trees here.
 
 Pins are also listed in `joint_eval/pins.py`. Bump both files together. These SHAs are install pins. The public/EOI claim cite stays pep `1d0f380` and is not an install pin. Soft is not EngClear.
 
-**Updating an existing environment.** pip keeps an already-installed sibling whose version number has not changed, so after a pin bump `python -m pip install -e ".[dev]"` can leave the old commit in `site-packages`. `tests/test_installed_pins.py` reads pip's install record (PEP 610 `direct_url.json`) and fails when the installed commit is not the pinned one. Recovery:
+**Updating an existing environment.** pip keeps an already-installed sibling whose version number has not changed, so after a pin bump `python -m pip install -e ".[dev]"` can leave the old commit in `site-packages`. The demo and the paired runner read pip's install record (PEP 610 `direct_url.json`) for both siblings before they run, and fail closed (exit 1, no output) when the installed commit is not the pinned one, when the record is missing (a plain or editable local install), or when the imported module is not a file that distribution installed. `tests/test_installed_pins.py` checks the same. Recovery:
 
 ```bash
 python -m pip uninstall -y agent-control-lab-pep agent-control-lab-supply-gate
