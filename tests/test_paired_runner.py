@@ -159,6 +159,7 @@ def test_full_fixture_set_when_pinned_checkouts_are_present() -> None:
     assert document["row_count"] == 28
     assert 20 <= document["row_count"] <= 50
     assert document["ok"] is True
+    assert document["all_gated_attacks_blocked"] is True
     assert document["residual_asr"] is None
     assert document["table_id"] is None
     assert document["runner_implemented"] is True
@@ -314,3 +315,59 @@ def test_csv_leaves_a_negative_delta_numeric() -> None:
     document["rows"][0]["arms"]["PEP"]["delta"] = -1
     records = list(csv.DictReader(_csv_text(document).splitlines()))
     assert any(record["delta"] == "-1" for record in records)
+
+
+# J-9: an attack a gate ran on and did not block is a failed run, not a
+# clean table with ``ok: true``.
+
+
+def _allow_one_attack(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first control-on DENY comes back ALLOW with the tool entered."""
+    from joint_eval import paired_runner
+
+    real = paired_runner._control_on
+    flipped: list[bool] = []
+
+    def _control_on(plan, **kwargs):
+        outcome = real(plan, **kwargs)
+        if not flipped and outcome["decision"] == "DENY":
+            flipped.append(True)
+            return {**outcome, "decision": "ALLOW", "invoked": True}
+        return outcome
+
+    monkeypatch.setattr(paired_runner, "_control_on", _control_on)
+
+
+def test_normal_run_records_all_gated_attacks_blocked() -> None:
+    document = run_paired(root=ROOT)
+    assert document["all_gated_attacks_blocked"] is True
+    assert document["ok"] is True
+
+
+def test_an_unblocked_attack_fails_the_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _allow_one_attack(monkeypatch)
+    out = tmp_path / "acl-paired.json"
+    code = main(["--out", str(out), "--root", str(ROOT)])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "PAIRED RUNNER FAIL: attack not blocked on control-on" in captured.err
+    assert "all gated attacks blocked: false" in captured.out
+    document = json.loads(out.read_text(encoding="utf-8"))
+    assert document["all_gated_attacks_blocked"] is False
+    # ``ok`` keeps its meaning: no DENY entered the tool.
+    assert document["ok"] is True
+
+
+def test_allow_unblocked_flag_exits_zero_and_keeps_the_field_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _allow_one_attack(monkeypatch)
+    out = tmp_path / "acl-paired.json"
+    code = main(["--out", str(out), "--root", str(ROOT), "--allow-unblocked"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "PAIRED RUNNER WARNING: attack not blocked on control-on" in captured.err
+    document = json.loads(out.read_text(encoding="utf-8"))
+    assert document["all_gated_attacks_blocked"] is False

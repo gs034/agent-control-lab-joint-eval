@@ -53,6 +53,8 @@ python -m joint_eval.paired_runner --out ./paired/acl-paired.json
 
 `ACL_PEP_ROOT` and `ACL_SUPPLY_GATE_ROOT` must be git checkouts whose `HEAD` is the SHA in `joint_eval/pins.py`. `--pep-root` and `--supply-root` are the same pins. A JSON file is written to `--out` and a CSV with the same stem is written beside it. A CSV string cell that starts with `=`, `+`, `-`, `@`, tab or CR gets a leading `'` so a spreadsheet does not read it as a formula; the JSON keeps the original string. A short summary goes to stdout.
 
+Two top-level fields say whether the run is clean, and the summary prints both. `ok` is the harness check: it is false when a control-on DENY still entered the tool. `all_gated_attacks_blocked` is the outcome check: it is false when an attack row that a gate ran on (control-on is neither `stub` nor `not_applicable`) was not blocked on control-on, that is, when its `attack_success_on` is not false. The runner writes the JSON and CSV either way, then exits 1 when either field is false, naming each unblocked `threat_id/arm` on stderr. `--allow-unblocked` lets a run with an unblocked attack exit 0 (with a warning on stderr) for exploratory use; the JSON still records `all_gated_attacks_blocked` false. `ok` keeps its earlier meaning, so a reader of an older document is not misled, and the new field is not part of the `table_id_candidate` preimage.
+
 ### Sibling pin check
 
 A `HEAD` equal to the pin is not enough on its own: a `.git/HEAD` file that names the pin and holds no objects would pass, and so would a real checkout at the pin with an edited fixture. `joint_eval/sibling_pin.py` checks the bytes the runner uses:
