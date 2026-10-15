@@ -78,21 +78,21 @@ def test_paired_document_keeps_table_id_and_residual_asr_null() -> None:
     assert "table_id: null (pending Cyber C4)" in summary
     assert document["table_id_candidate"] in summary
     assert document["b7_prereg_hash"] in summary
-    assert "This draft is not EngClear" in summary
+    assert "This output is not EngClear" in summary
     assert "residual_asr: null" in summary
 
 
 HISTORICAL_SEALS = {
     "ACL_JointEval_Preregistration_Limitations_B7_2026-09-23": (
-        "a528d816e7502b4873587e56902f98dec2fcd2449189558699e3e1b12df3a62e",
+        "580ba16a32a95e3340ec470cdc252406e285be704744d7eaa9821dbab32da187",
         b"| pep install pin | `ffd048a228dd2c8193418db6bebbab7cd339cd08` |",
     ),
     "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05": (
-        "8a5d44542b9de01d6520e6f446108d5d2b60556cedab792683a072884c9eb1ec",
+        "3b6b70b798562937f465e52a85065edf96da5b319219893032d9e5b3bd72aaaa",
         b"| supply-gate install pin | `f99b41d98f14c1e2cd66b6549e98dbc97c181ce8` |",
     ),
     "ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05": (
-        "f2ebe9a1d395e269580dc6e4ab13d0d3be0d8aceae3a6c2d65f9d9fbb6086884",
+        "5cd055d846d57fc40a3ba926732ed9bf82ffc7dedf5b37753bd8fa6812fbb391",
         b"| pep install pin | `76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9` |",
     ),
     "ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15": (

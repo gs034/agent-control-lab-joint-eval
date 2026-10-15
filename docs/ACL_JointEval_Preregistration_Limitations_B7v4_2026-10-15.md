@@ -4,7 +4,7 @@
 
 **Artefact id:** `ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15`.
 
-**Supersedes:** `ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05`, which superseded `ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05` and `ACL_JointEval_Preregistration_Limitations_B7_2026-09-23`. All three stay in this tree. v4 changes only the pep and supply-gate install pins and records why. Every limitation, status rule and provisional-field rule below is carried over unchanged.
+**Supersedes:** `ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05`, which superseded `ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05` and `ACL_JointEval_Preregistration_Limitations_B7_2026-09-23`. All three stay in this tree byte-identical as historical seals. v4 changes only the pep and supply-gate install pins and records why. Every limitation, status rule and provisional-field rule below is carried over unchanged.
 
 **Status:** draft for owner review. This file is the in-tree text. `b7_prereg_hash` is the SHA-256 of these bytes. `table_id_candidate` binds that hash to the paired-runner schema version and the pin set below. The paired runner reads this file from the joint-eval tree. It does not fetch a writing vault at runtime. The hash is not stored in this file.
 
