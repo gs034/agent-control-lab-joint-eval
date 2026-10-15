@@ -10,8 +10,8 @@
 
 Three statuses stay distinct.
 
-- Soft is this writing note.
-- EngClear is a cyber pass. Soft is not EngClear.
+- This draft is the writing note.
+- EngClear is a cyber pass. This draft is not EngClear.
 - A Cyber C4 table mint is a later `table_id`. EngClear is not a C4 table mint.
 - This candidate does not unlock funding.
 

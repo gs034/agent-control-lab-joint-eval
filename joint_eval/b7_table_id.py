@@ -32,7 +32,7 @@ RELATIVE_PATH = Path("docs") / f"{ARTEFACT_ID}.md"
 CLAIM_LINEAGE = "1d0f380"
 CLAIM_LINEAGE_SHA = "1d0f3809a4a16d4a6ac3524b287cf719f192e1f9"
 STATUS_SEPARATION = (
-    "Soft is not EngClear. EngClear is not a Cyber C4 table mint. "
+    "This draft is not EngClear. EngClear is not a Cyber C4 table mint. "
     "This candidate does not unlock funding. "
     "table_id and residual_asr stay null. Claim cite stays pep 1d0f380."
 )

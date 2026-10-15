@@ -40,4 +40,4 @@ Every other registered outcome in the vocabulary (cancellation acknowledgement o
 
 ## Out of scope
 
-No new kernel fence. No provider cutset. No cross-process certificate. Soft is not EngClear. EngClear is not a Cyber C4 table mint. Claim cite stays `1d0f380`.
+No new kernel fence. No provider cutset. No cross-process certificate. This draft is not EngClear. EngClear is not a Cyber C4 table mint. Claim cite stays `1d0f380`.

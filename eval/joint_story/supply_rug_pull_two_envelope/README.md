@@ -11,4 +11,4 @@ Existence proof only. One fixture, two envelopes in sequence. **No ASR.** This i
 
 The unchanged-pin runtime rug pull (behaviour changes, pin and observed HEAD do not) is **not** a third envelope and is **not** a DENY. The measured corpus records it as `not_mediated` on every arm: `acl-mc-b5-rug-pull-unchanged-pin-runtime`, `table_id` `acl-coverage-b5-v1`. There is no Lab content scanner for that case.
 
-Claim cite stays pep diligence tip `1d0f380`. The soft supply install pin is unchanged.
+Claim cite stays pep diligence tip `1d0f380`. The supply install pin is unchanged.
