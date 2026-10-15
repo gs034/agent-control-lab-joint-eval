@@ -4,8 +4,11 @@
 
 from __future__ import annotations
 
+import errno
 import os
+import stat
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -121,6 +124,10 @@ def test_racing_ancestor_swap_never_redirects(tmp_path: Path) -> None:
     flipper.start()
     try:
         for index in range(400):
+            # Both threads run Python. Yield so the flipper can replace the
+            # link; otherwise it can stay the other user's for every attempt
+            # and the trusted tree stays empty without the race being run.
+            time.sleep(0)
             try:
                 _write(ancestor / "b" / f"out{index}")
             except safe_write.OutputPathError:
@@ -130,3 +137,105 @@ def test_racing_ancestor_swap_never_redirects(tmp_path: Path) -> None:
         flipper.join()
     assert list((victim / "b").iterdir()) == []
     assert list((real / "b").iterdir())
+
+
+def _parent_dir(path: Path) -> int:
+    return os.open(path, os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_CLOEXEC", 0))
+
+
+def test_owner_check_and_target_read_stay_on_one_inode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replacing the name after the owner is known must not change the target."""
+    real = tmp_path / "real"
+    victim = tmp_path / "victim"
+    real.mkdir()
+    victim.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real, target_is_directory=True)
+    expected = os.readlink(link)
+    swapped = False
+
+    def _swap(info: os.stat_result) -> os.stat_result:
+        nonlocal swapped
+        if swapped or not stat.S_ISLNK(info.st_mode):
+            return info
+        swapped = True
+        staged = tmp_path / "staged"
+        staged.symlink_to(victim, target_is_directory=True)
+        os.replace(staged, link)
+        return info
+
+    real_stat = os.stat
+    real_fstat = os.fstat
+
+    def _stat(path: str, *args: object, **kwargs: object) -> os.stat_result:
+        return _swap(real_stat(path, *args, **kwargs))
+
+    def _fstat(fd: int) -> os.stat_result:
+        return _swap(real_fstat(fd))
+
+    monkeypatch.setattr(safe_write.os, "stat", _stat)
+    monkeypatch.setattr(safe_write.os, "fstat", _fstat)
+    parent = _parent_dir(tmp_path)
+    try:
+        try:
+            target: str | None = safe_write._trusted_link_target(
+                parent, "link", link, OSError(errno.ELOOP, "too many levels of symbolic links")
+            )
+        except safe_write.OutputPathError:
+            target = None
+    finally:
+        os.close(parent)
+    assert swapped
+    assert target in {None, expected}
+    assert os.readlink(link) != expected
+
+
+def test_fallback_returns_a_stable_owned_symlink_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real, target_is_directory=True)
+    expected = os.readlink(link)
+    monkeypatch.setattr(safe_write, "_open_link_no_follow", lambda *_args, **_kwargs: None)
+    parent = _parent_dir(tmp_path)
+    try:
+        target = safe_write._trusted_link_target(
+            parent, "link", link, OSError(errno.ELOOP, "too many levels of symbolic links")
+        )
+    finally:
+        os.close(parent)
+    assert target == expected
+
+
+def test_fallback_refuses_a_link_replaced_between_the_stats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = tmp_path / "real"
+    victim = tmp_path / "victim"
+    real.mkdir()
+    victim.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real, target_is_directory=True)
+    monkeypatch.setattr(safe_write, "_open_link_no_follow", lambda *_args, **_kwargs: None)
+    real_readlink = os.readlink
+    swapped = False
+
+    def _swap_then_read(path: str, *args: object, **kwargs: object) -> str:
+        nonlocal swapped
+        if not swapped and path not in {"", b""}:
+            swapped = True
+            staged = tmp_path / "staged"
+            staged.symlink_to(victim, target_is_directory=True)
+            os.replace(staged, link)
+        return real_readlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(safe_write.os, "readlink", _swap_then_read)
+    parent = _parent_dir(tmp_path)
+    try:
+        with pytest.raises(safe_write.OutputPathError, match="another user's symlink"):
+            safe_write._trusted_link_target(
+                parent, "link", link, OSError(errno.ELOOP, "too many levels of symbolic links")
+            )
+    finally:
+        os.close(parent)
+    assert swapped
