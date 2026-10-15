@@ -45,6 +45,8 @@ _POSIX_FD = (
     and hasattr(os, "O_DIRECTORY")
     and os.open in os.supports_dir_fd
     and os.mkdir in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.readlink in os.supports_dir_fd
 )
 
 
@@ -194,8 +196,9 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
 
     Refused (``OutputPathError``):
     - a symlink anywhere in the given path that another user owns;
-    - a parent directory another user (other than root) owns, or that anyone
-      can write without the sticky bit;
+    - a directory on the way to the output directory (its parent and every
+      ancestor up to ``/``) that another user (other than root) owns, or
+      that anyone can write without the sticky bit;
     - an output directory that is a symlink, owned by another user, or
       world-writable. Group write is accepted (see the module docstring).
     """
@@ -203,23 +206,18 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
     if target.name in {"", ".", ".."}:
         raise OutputPathError(f"output path must name a directory: {path}")
     _require_trusted_links(target)
-    try:
-        target.parent.mkdir(0o755, parents=True, exist_ok=True)
-    except OSError as exc:
-        raise OutputPathError(f"output parent unavailable: {exc}") from exc
     if not _POSIX_FD:
+        try:
+            target.parent.mkdir(0o755, parents=True, exist_ok=True)
+        except OSError as exc:
+            raise OutputPathError(f"output parent unavailable: {exc}") from exc
         if target.is_symlink() or (target.exists() and not target.is_dir()):
             raise OutputPathError(f"output path is not a directory: {target}")
         target.mkdir(exist_ok=True)
         yield OutputDirectory(target, None)
         return
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+    parent_fd = _open_parent(target.parent)
     try:
-        parent_fd = os.open(target.parent.resolve(), flags)
-    except OSError as exc:
-        raise OutputPathError(f"output parent unavailable: {exc}") from exc
-    try:
-        _require_trusted_parent(parent_fd, target.parent)
         try:
             os.mkdir(target.name, 0o755, dir_fd=parent_fd)
         except FileExistsError:
@@ -227,7 +225,7 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
         except OSError as exc:
             raise OutputPathError(f"output path unavailable: {exc}") from exc
         try:
-            fd = os.open(target.name, flags | os.O_NOFOLLOW, dir_fd=parent_fd)
+            fd = os.open(target.name, _DIR_FLAGS | os.O_NOFOLLOW, dir_fd=parent_fd)
         except OSError as exc:
             raise OutputPathError(f"output path is not a directory: {target}") from exc
         try:
@@ -237,6 +235,102 @@ def output_directory(path: Path | str) -> Iterator[OutputDirectory]:
             os.close(fd)
     finally:
         os.close(parent_fd)
+
+
+_DIR_FLAGS = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_CLOEXEC", 0)
+
+# Same bound the Linux kernel uses for symlinks followed in one lookup.
+_MAX_LINKS = 40
+
+
+def _open_parent(parent: Path) -> int:
+    """Open ``parent`` by descriptor, one component at a time from ``/``.
+
+    Each component is opened relative to the descriptor of the one before it
+    with ``O_DIRECTORY | O_NOFOLLOW``, and each directory reached must pass
+    the parent rules (this user or root owns it; world write needs the
+    sticky bit). A missing component is created (0o755). A symlink is
+    followed only when this user or root owns it; its target is walked the
+    same way, from ``/`` when absolute or from the directory holding the
+    link otherwise. Because every step holds the directory it checked,
+    renaming or replacing a component after the check cannot redirect the
+    walk.
+    """
+    pending = list(parent.parts[1:])
+    label = Path(parent.anchor or os.sep)
+    fd = _open_anchor(label)
+    links = 0
+    created: str | None = None
+    try:
+        _require_trusted_parent(fd, label)
+        while pending:
+            part = pending.pop(0)
+            if part in {"", "."}:
+                continue
+            try:
+                child = os.open(part, _DIR_FLAGS | os.O_NOFOLLOW, dir_fd=fd)
+            except FileNotFoundError as exc:
+                if created == part:
+                    raise OutputPathError(f"output parent vanished while it was created: {label / part}") from exc
+                created = part
+                try:
+                    os.mkdir(part, 0o755, dir_fd=fd)
+                except FileExistsError:
+                    pass
+                except OSError as exc:
+                    raise OutputPathError(f"output parent unavailable: {label / part}: {exc}") from exc
+                pending.insert(0, part)
+                continue
+            except OSError as exc:
+                target = _trusted_link_target(fd, part, label / part, exc)
+                links += 1
+                if links > _MAX_LINKS:
+                    raise OutputPathError(f"output path has too many symlinks: {parent}") from exc
+                link_parts = list(Path(target).parts)
+                if Path(target).is_absolute():
+                    os.close(fd)
+                    fd = -1
+                    label = Path(link_parts[0])
+                    fd = _open_anchor(label)
+                    _require_trusted_parent(fd, label)
+                    link_parts = link_parts[1:]
+                pending[:0] = link_parts
+                continue
+            created = None
+            os.close(fd)
+            fd = child
+            label = label / part
+            _require_trusted_parent(fd, label)
+        return fd
+    except BaseException:
+        if fd >= 0:
+            os.close(fd)
+        raise
+
+
+def _open_anchor(label: Path) -> int:
+    try:
+        return os.open(label, _DIR_FLAGS)
+    except OSError as exc:
+        raise OutputPathError(f"output parent unavailable: {exc}") from exc
+
+
+def _trusted_link_target(dir_fd: int, name: str, label: Path, error: OSError) -> str:
+    """The open of ``name`` failed: return a trusted symlink's target, or refuse."""
+    try:
+        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+    except OSError as exc:
+        raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+    if not stat.S_ISLNK(info.st_mode):
+        if not stat.S_ISDIR(info.st_mode):
+            raise OutputPathError(f"output parent is not a directory: {label}") from error
+        raise OutputPathError(f"output parent unavailable: {label}: {error}") from error
+    if info.st_uid not in {os.geteuid(), 0}:
+        raise OutputPathError(f"output path passes through another user's symlink: {label}")
+    try:
+        return os.readlink(name, dir_fd=dir_fd)
+    except OSError as exc:
+        raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
 
 
 _FSYNC_UNSUPPORTED = frozenset(
@@ -275,7 +369,11 @@ def _require_single_name(name: str) -> None:
 
 
 def _require_trusted_links(target: Path) -> None:
-    """A symlink in the given path is followed only when this user or root owns it."""
+    """A symlink in the given path is followed only when this user or root owns it.
+
+    An early, by-name check for a clear message. On POSIX the descriptor walk
+    in ``_open_parent`` applies the same rule again and is the one relied on.
+    """
     if not hasattr(os, "geteuid"):
         return
     current = Path(target.anchor)
@@ -283,7 +381,9 @@ def _require_trusted_links(target: Path) -> None:
         current = current / part
         try:
             info = os.lstat(current)
-        except FileNotFoundError:
+        except OSError:
+            # Missing, a loop, or not a directory: the walk (or the fallback
+            # mkdir) reports it.
             return
         if stat.S_ISLNK(info.st_mode) and info.st_uid not in {os.geteuid(), 0}:
             raise OutputPathError(f"output path passes through another user's symlink: {current}")
