@@ -14,13 +14,14 @@ from pathlib import Path
 from types import ModuleType
 
 PEP_REPO = "https://github.com/gs034/agent-control-lab-pep"
-PEP_SHA = "76c6d4bedd7a2702a55513ae2ddbd17f8d9ccac9"
+# Install pins (B7 v4): the sibling commits the Lab console installs, so one
+# pin set holds for both (the J-5 installed-pin check refuses any other).
+PEP_SHA = "653ee4a819c55bb1fadab2421aa62336352ce2e3"
 PEP_PACKAGE = "agent-control-lab-pep"
 
 SUPPLY_GATE_REPO = "https://github.com/gs034/agent-control-lab-supply-gate"
-# Install pin (B7 v3): the B6 measured-corpus loader plus the brand-wall
-# email keep-out commit. Not the claim cite.
-SUPPLY_GATE_SHA = "7044a313dffc60e08b26366950328f9025c56310"
+# Not the claim cite.
+SUPPLY_GATE_SHA = "d5e5ac11fd4ae47f428d2770bdda0b8df0b1de59"
 SUPPLY_GATE_PACKAGE = "agent-control-lab-supply-gate"
 
 
