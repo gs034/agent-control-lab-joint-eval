@@ -407,3 +407,76 @@ def test_csv_of_the_in_tree_run_has_no_escapes() -> None:
     text = _csv_text(run_paired(root=ROOT))
     assert "\\x" not in text
     assert "'" not in text
+
+
+# J-8: table_id_candidate binds only the frozen B7 note, the schema version
+# and the pins. inputs_digest binds the bytes the run read.
+
+SEALED_CANDIDATE = "0ac40a54ab2ca223418dea6c2e8f65cf7763abf6f60842e1cd248726bd5c1df2"
+
+
+def _digest_tree(tmp_path: Path) -> Path:
+    from joint_eval.b7_table_id import RELATIVE_PATH
+
+    root = tmp_path / "tree"
+    shutil.copytree(ROOT / "eval", root / "eval")
+    (root / RELATIVE_PATH).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / RELATIVE_PATH, root / RELATIVE_PATH)
+    return root
+
+
+def _append_byte(path: Path) -> None:
+    path.write_bytes(path.read_bytes() + b" ")
+
+
+def test_inputs_digest_moves_with_corpus_and_fixture_bytes_but_candidate_does_not(
+    tmp_path: Path,
+) -> None:
+    root = _digest_tree(tmp_path)
+    before = run_paired(root=root)
+    assert before["table_id_candidate"] == SEALED_CANDIDATE
+    record = before["inputs_digest_record"]
+    assert record["row_source"] == "joint_story_fixtures"
+    assert record["joint_eval_commit"] is None  # no .git in the copy
+    paths = {item["path"] for item in record["files"]}
+    assert "eval/measured_corpus/index.json" in paths
+    assert "eval/joint_story/pep_approval_binding/envelope.json" in paths
+
+    _append_byte(root / "eval" / "measured_corpus" / "index.json")
+    after_index = run_paired(root=root)
+    assert after_index["inputs_digest"] != before["inputs_digest"]
+    assert after_index["table_id_candidate"] == SEALED_CANDIDATE
+    assert after_index["table_id_candidate_preimage"] == before["table_id_candidate_preimage"]
+
+    _append_byte(root / "eval" / "joint_story" / "pep_approval_binding" / "envelope.json")
+    after_fixture = run_paired(root=root)
+    assert after_fixture["inputs_digest"] not in {
+        before["inputs_digest"],
+        after_index["inputs_digest"],
+    }
+    assert after_fixture["table_id_candidate"] == SEALED_CANDIDATE
+    assert after_fixture["rows"] == before["rows"]
+
+
+def test_inputs_digest_is_stable_and_printed(tmp_path: Path) -> None:
+    root = _digest_tree(tmp_path)
+    first = run_paired(root=root)
+    second = run_paired(root=root)
+    assert first["inputs_digest"] == second["inputs_digest"]
+    assert len(first["inputs_digest"]) == 64
+    assert f"inputs_digest: {first['inputs_digest']}" in format_summary(first)
+
+
+def test_expect_inputs_digest_mismatch_fails_the_cli(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _digest_tree(tmp_path)
+    out = tmp_path / "o" / "p.json"
+    assert main(["--out", str(out), "--root", str(root)]) == 0
+    digest = json.loads(out.read_text(encoding="utf-8"))["inputs_digest"]
+    capsys.readouterr()
+    assert main(["--out", str(out), "--root", str(root), "--expect-inputs-digest", digest]) == 0
+    _append_byte(root / "eval" / "measured_corpus" / "index.json")
+    code = main(["--out", str(out), "--root", str(root), "--expect-inputs-digest", digest])
+    assert code == 1
+    assert "PAIRED RUNNER FAIL: inputs_digest" in capsys.readouterr().err
