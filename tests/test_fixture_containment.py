@@ -538,6 +538,82 @@ def test_directory_fsync_io_error_propagates_but_unsupported_is_tolerated(
             output.replace("a.json", "1")
 
 
+def _force_fallback_directory_open(monkeypatch: pytest.MonkeyPatch, code: int) -> None:
+    """Take the path-based writer and fail the directory open with ``code``."""
+    from joint_eval import safe_write
+
+    monkeypatch.setattr(safe_write, "_POSIX_FD", False)
+    real_open = os.open
+
+    def _open(path, flags, mode=0o777, *, dir_fd=None):
+        if flags & os.O_DIRECTORY:
+            raise OSError(code, os.strerror(code))
+        if dir_fd is None:
+            return real_open(path, flags, mode)
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(safe_write.os, "open", _open)
+
+
+@pytest.mark.skipif(not POSIX or not hasattr(os, "O_DIRECTORY"), reason="fallback directory open")
+def test_fallback_directory_open_reraises_eio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import errno
+
+    from joint_eval import safe_write
+
+    _force_fallback_directory_open(monkeypatch, errno.EIO)
+    with pytest.raises(OSError) as raised:
+        with safe_write.output_directory(tmp_path / "bad") as output:
+            output.replace("a.json", "1")
+    assert raised.value.errno == errno.EIO
+
+
+@pytest.mark.skipif(not POSIX or not hasattr(os, "O_DIRECTORY"), reason="fallback directory open")
+def test_fallback_directory_open_tolerates_eacces_and_leaves_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import errno
+
+    from joint_eval import safe_write
+
+    out = tmp_path / "ok"
+    _force_fallback_directory_open(monkeypatch, errno.EACCES)
+    with safe_write.output_directory(out) as output:
+        output.replace_all([("a.json", "1"), ("b.json", "2")])
+    assert (out / "a.json").read_text(encoding="utf-8") == "1"
+    assert (out / "b.json").read_text(encoding="utf-8") == "2"
+    assert sorted(p.name for p in out.iterdir()) == ["a.json", "b.json"]
+
+
+@pytest.mark.skipif(not POSIX or not hasattr(os, "O_DIRECTORY"), reason="fallback directory open")
+@pytest.mark.parametrize("code_name", ["EACCES", "EPERM"])
+def test_fallback_directory_open_warns_when_permission_skips_fsync(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    code_name: str,
+) -> None:
+    import errno
+    import logging
+
+    from joint_eval import safe_write
+
+    code = getattr(errno, code_name)
+    out = tmp_path / "ok"
+    _force_fallback_directory_open(monkeypatch, code)
+    with caplog.at_level(logging.WARNING, logger="joint_eval.safe_write"):
+        with safe_write.output_directory(out) as output:
+            output.replace("a.json", "1")
+    assert (out / "a.json").read_text(encoding="utf-8") == "1"
+    records = [record for record in caplog.records if record.name == "joint_eval.safe_write"]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    message = records[0].getMessage()
+    assert "directory fsync skipped" in message
+    assert str(out) in message
+    assert code_name in message
+
+
 def test_replace_all_leaves_the_previous_set_untouched_when_a_body_write_fails(tmp_path: Path) -> None:
     from joint_eval import safe_write
 
