@@ -99,6 +99,10 @@ HISTORICAL_SEALS = {
         "61da86b8fe5d0e3e9aa8b47f999fe087a155f4f20b6c1da23daa6ab70636e29a",
         b"| pep install pin | `653ee4a819c55bb1fadab2421aa62336352ce2e3` |",
     ),
+    "ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15": (
+        "0a4a691115b0def6f2bbf3caaff8766424ee965399fad6b24a4045ae4a45a5f7",
+        b"| supply-gate install pin | `009c0cec362505240c7f33cf7c297bb89c234726` |",
+    ),
 }
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import json
+import shutil
 from pathlib import Path
 
 from joint_eval.control_arena_export import (
@@ -315,3 +316,37 @@ def test_module_does_not_import_or_call_an_eval_loop():
     text = MODULE.read_text(encoding="utf-8")
     assert "inspect_ai" not in text
     assert "import control_arena" not in text
+
+
+def test_trajectory_lines_escape_del_and_c1(tmp_path: Path):
+    """J-10: DEL and C1 from a fixture string are escaped in trajectory.jsonl."""
+    root = tmp_path / "tree"
+    shutil.copytree(ROOT / "eval", root / "eval")
+    prose = root / "eval" / "joint_story" / "supply_plugin4shell_class" / "untrusted_prose.txt"
+    planted = "\x7f\x9b31m\x85\x1b[2J"
+    prose.write_text(prose.read_text(encoding="utf-8") + planted, encoding="utf-8")
+    out = tmp_path / "out"
+    write_control_arena_export(out, root=root)
+    raw = (out / "trajectory.jsonl").read_text(encoding="utf-8")
+    assert [char for char in raw if char == "\x7f" or "\x80" <= char <= "\x9f"] == []
+    assert [char for char in raw if ord(char) < 0x20 and char != "\n"] == []
+    assert "\\u007f" in raw and "\\u009b" in raw
+    # The decoded data still holds the authored characters.
+    assert any(planted in text for text in _strings([json.loads(line) for line in raw.splitlines()]))
+
+
+def _strings(value):
+    """Every string in ``value``, descending into strings that hold JSON (``raw_state``)."""
+    if isinstance(value, str):
+        yield value
+        if value[:1] in ("{", "["):
+            try:
+                yield from _strings(json.loads(value))
+            except ValueError:
+                pass
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _strings(item)

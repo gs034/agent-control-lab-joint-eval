@@ -8,6 +8,9 @@ cursor, rewrite earlier lines, retitle the window, or plant a fake
 ``ok: true`` line. Every C0 control except tab, DEL, and every C1 control
 is written as a visible ``\\xNN`` escape instead. Newline is escaped too
 unless the caller keeps it, so one message stays on one line.
+
+``escape_controls`` is the stricter form used for file output (CSV
+cells): it escapes tab and newline as well.
 """
 
 from __future__ import annotations
@@ -27,3 +30,8 @@ def terminal_safe(text: str, *, keep_newlines: bool = False) -> str:
         else:
             out.append(f"\\x{code:02x}")
     return "".join(out)
+
+
+def escape_controls(text: str) -> str:
+    """``text`` with every C0 control (tab and newline included), DEL and C1 as ``\\xNN``."""
+    return "".join(f"\\x{ord(char):02x}" if _is_control(ord(char)) else char for char in text)

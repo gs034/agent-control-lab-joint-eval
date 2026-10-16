@@ -252,9 +252,10 @@ def _open_parent(parent: Path) -> int:
     sticky bit). A missing component is created (0o755). A symlink is
     followed only when this user or root owns it; its target is walked the
     same way, from ``/`` when absolute or from the directory holding the
-    link otherwise. Because every step holds the directory it checked,
-    renaming or replacing a component after the check cannot redirect the
-    walk.
+    link otherwise. The owner and the target are taken from one open inode
+    (``O_PATH | O_NOFOLLOW``), so a name swapped in between cannot change
+    either. Because every step holds the directory it checked, renaming or
+    replacing a component after the check cannot redirect the walk.
     """
     pending = list(parent.parts[1:])
     label = Path(parent.anchor or os.sep)
@@ -315,22 +316,98 @@ def _open_anchor(label: Path) -> int:
         raise OutputPathError(f"output parent unavailable: {exc}") from exc
 
 
+# open(O_PATH) is missing or this filesystem rejects the flag.
+_OPATH_UNSUPPORTED = frozenset(
+    code
+    for code in (
+        getattr(errno, "EINVAL", None),
+        getattr(errno, "ENOTSUP", None),
+        getattr(errno, "EOPNOTSUPP", None),
+        getattr(errno, "ENOSYS", None),
+    )
+    if code
+)
+
+
 def _trusted_link_target(dir_fd: int, name: str, label: Path, error: OSError) -> str:
-    """The open of ``name`` failed: return a trusted symlink's target, or refuse."""
+    """The open of ``name`` failed: return a trusted symlink's target, or refuse.
+
+    The owner check and the target read have to describe the same inode. A
+    swap between a separate stat and readlink would let the walk follow
+    another user's link. Open the link with ``O_PATH | O_NOFOLLOW`` and use
+    that descriptor for both: ``fstat`` for the owner, and ``readlinkat`` on
+    the descriptor (an empty path) for the target.
+
+    Where ``O_PATH`` cannot be used, stat the name, read the target, stat
+    again, and refuse unless device, inode, and owner are unchanged.
+    """
+    opened = _open_link_no_follow(dir_fd, name, label)
+    if opened is not None:
+        try:
+            return _trusted_target_from_fd(opened, label, error)
+        finally:
+            os.close(opened)
+    return _trusted_link_target_recheck(dir_fd, name, label, error)
+
+
+def _open_link_no_follow(dir_fd: int, name: str, label: Path) -> int | None:
+    """Open ``name`` without following it. ``None`` when ``O_PATH`` is unavailable."""
+    if not hasattr(os, "O_PATH"):
+        return None
+    flags = os.O_PATH | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
     try:
-        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        return os.open(name, flags, dir_fd=dir_fd)
+    except OSError as exc:
+        if exc.errno in _OPATH_UNSUPPORTED:
+            return None
+        raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+
+
+def _trusted_target_from_fd(fd: int, label: Path, error: OSError) -> str:
+    """Owner and target of the inode ``fd`` already refers to."""
+    info = os.fstat(fd)
+    _refuse_untrusted_link(info, label, error)
+    try:
+        # readlinkat(fd, "") returns this inode's body. readlink of
+        # /proc/self/fd/<fd> names the path of the descriptor, not the body.
+        return os.readlink("", dir_fd=fd)
     except OSError as exc:
         raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+
+
+def _refuse_untrusted_link(info: os.stat_result, label: Path, error: OSError) -> None:
     if not stat.S_ISLNK(info.st_mode):
         if not stat.S_ISDIR(info.st_mode):
             raise OutputPathError(f"output parent is not a directory: {label}") from error
         raise OutputPathError(f"output parent unavailable: {label}: {error}") from error
     if info.st_uid not in {os.geteuid(), 0}:
         raise OutputPathError(f"output path passes through another user's symlink: {label}")
+
+
+def _trusted_link_target_recheck(dir_fd: int, name: str, label: Path, error: OSError) -> str:
+    """Stat, read, stat again. Refuse unless device, inode, and owner match."""
     try:
-        return os.readlink(name, dir_fd=dir_fd)
+        before = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
     except OSError as exc:
         raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+    _refuse_untrusted_link(before, label, error)
+    try:
+        target = os.readlink(name, dir_fd=dir_fd)
+    except OSError as exc:
+        raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+    try:
+        after = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+    except OSError as exc:
+        raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
+    same = (
+        before.st_dev == after.st_dev
+        and before.st_ino == after.st_ino
+        and before.st_uid == after.st_uid
+        and stat.S_ISLNK(after.st_mode)
+    )
+    if not same:
+        raise OutputPathError(f"output path passes through another user's symlink: {label}")
+    return target
 
 
 _FSYNC_UNSUPPORTED = frozenset(

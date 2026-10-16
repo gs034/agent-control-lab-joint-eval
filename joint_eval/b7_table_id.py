@@ -27,6 +27,7 @@ HISTORICAL_ARTEFACT_IDS = (
     "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05",
     "ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05",
     "ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15",
+    "ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15",
 )
 RELATIVE_PATH = Path("docs") / f"{ARTEFACT_ID}.md"
 CLAIM_LINEAGE = "1d0f380"

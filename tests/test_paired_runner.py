@@ -22,6 +22,7 @@ from joint_eval.paired_runner import (
     run_paired,
 )
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
+from joint_eval.terminal import escape_controls
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -159,6 +160,7 @@ def test_full_fixture_set_when_pinned_checkouts_are_present() -> None:
     assert document["row_count"] == 28
     assert 20 <= document["row_count"] <= 50
     assert document["ok"] is True
+    assert document["all_gated_attacks_blocked"] is True
     assert document["residual_asr"] is None
     assert document["table_id"] is None
     assert document["runner_implemented"] is True
@@ -293,13 +295,15 @@ def test_csv_neutralises_formula_cells_from_corpus_strings(tmp_path: Path, lead:
     json_path, csv_path = write_paired(document, tmp_path / "p.json")
     with csv_path.open(encoding="utf-8", newline="") as handle:
         records = list(csv.DictReader(handle))
+    # J-10: a tab or CR lead keeps its ``'`` and is then written as ``\\xNN``.
+    shown = escape_controls(lead)
     first = [record for record in records if record["threat_id"].endswith(payload[1:])]
     assert len(first) == 3
     for record in first:
-        assert record["threat_id"] == "'" + payload
-        assert record["kind"] == f"'{lead}1+1"
+        assert record["threat_id"] == "'" + shown + payload[1:]
+        assert record["kind"] == f"'{shown}1+1"
     pep = next(record for record in first if record["arm"] == "PEP")
-    assert pep["path"] == f"'{lead}cmd|' /C calc'!A0"
+    assert pep["path"] == f"'{shown}cmd|' /C calc'!A0"
     for record in records:
         for value in record.values():
             assert not value.startswith(("=", "+", "-", "@", "\t", "\r")), record
@@ -314,3 +318,165 @@ def test_csv_leaves_a_negative_delta_numeric() -> None:
     document["rows"][0]["arms"]["PEP"]["delta"] = -1
     records = list(csv.DictReader(_csv_text(document).splitlines()))
     assert any(record["delta"] == "-1" for record in records)
+
+
+# J-9: an attack a gate ran on and did not block is a failed run, not a
+# clean table with ``ok: true``.
+
+
+def _allow_one_attack(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first control-on DENY comes back ALLOW with the tool entered."""
+    from joint_eval import paired_runner
+
+    real = paired_runner._control_on
+    flipped: list[bool] = []
+
+    def _control_on(plan, **kwargs):
+        outcome = real(plan, **kwargs)
+        if not flipped and outcome["decision"] == "DENY":
+            flipped.append(True)
+            return {**outcome, "decision": "ALLOW", "invoked": True}
+        return outcome
+
+    monkeypatch.setattr(paired_runner, "_control_on", _control_on)
+
+
+def test_normal_run_records_all_gated_attacks_blocked() -> None:
+    document = run_paired(root=ROOT)
+    assert document["all_gated_attacks_blocked"] is True
+    assert document["ok"] is True
+
+
+def test_an_unblocked_attack_fails_the_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _allow_one_attack(monkeypatch)
+    out = tmp_path / "acl-paired.json"
+    code = main(["--out", str(out), "--root", str(ROOT)])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "PAIRED RUNNER FAIL: attack not blocked on control-on" in captured.err
+    assert "all gated attacks blocked: false" in captured.out
+    document = json.loads(out.read_text(encoding="utf-8"))
+    assert document["all_gated_attacks_blocked"] is False
+    # ``ok`` keeps its meaning: no DENY entered the tool.
+    assert document["ok"] is True
+
+
+def test_allow_unblocked_flag_exits_zero_and_keeps_the_field_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _allow_one_attack(monkeypatch)
+    out = tmp_path / "acl-paired.json"
+    code = main(["--out", str(out), "--root", str(ROOT), "--allow-unblocked"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "PAIRED RUNNER WARNING: attack not blocked on control-on" in captured.err
+    document = json.loads(out.read_text(encoding="utf-8"))
+    assert document["all_gated_attacks_blocked"] is False
+
+
+# J-10: control characters in corpus strings are not written raw to the CSV.
+
+_CONTROLS = "\x1b]0;owned\x07\x1b[2J\x00\x7f\x9b31m\x85\r\nok\ttrue"
+
+
+def test_csv_escapes_control_characters_from_corpus_strings(tmp_path: Path) -> None:
+    from joint_eval.paired_runner import write_paired
+
+    document = run_paired(root=ROOT)
+    document["rows"][0]["threat_id"] = "T" + _CONTROLS
+    document["rows"][0]["arms"]["PEP"]["path"] = "p" + _CONTROLS
+    _json_path, csv_path = write_paired(document, tmp_path / "p.json")
+    raw = csv_path.read_bytes().decode("utf-8")
+    body = raw.replace("\r\n", "")
+    bad = [char for char in body if ord(char) < 0x20 or 0x7F <= ord(char) <= 0x9F]
+    assert bad == []
+    shown = "\\x1b]0;owned\\x07\\x1b[2J\\x00\\x7f\\x9b31m\\x85\\x0d\\x0aok\\x09true"
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        records = list(csv.DictReader(handle))
+    first = [record for record in records if record["threat_id"] == "T" + shown]
+    assert len(first) == 3
+    assert next(record for record in first if record["arm"] == "PEP")["path"] == "p" + shown
+
+
+def test_csv_of_the_in_tree_run_has_no_escapes() -> None:
+    """The documented run has no control characters, so the CSV bytes are unchanged."""
+    from joint_eval.paired_runner import _csv_text
+
+    text = _csv_text(run_paired(root=ROOT))
+    assert "\\x" not in text
+    assert "'" not in text
+
+
+# J-8: table_id_candidate binds only the frozen B7 note, the schema version
+# and the pins. inputs_digest binds the bytes the run read.
+
+SEALED_CANDIDATE = "e7acb1ff9fe5e2ade949e8eb4b4b5a7e71ad213a9c010abd014749fd49e7bc57"
+
+
+def _digest_tree(tmp_path: Path) -> Path:
+    from joint_eval.b7_table_id import RELATIVE_PATH
+
+    root = tmp_path / "tree"
+    shutil.copytree(ROOT / "eval", root / "eval")
+    (root / RELATIVE_PATH).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / RELATIVE_PATH, root / RELATIVE_PATH)
+    return root
+
+
+def _append_byte(path: Path) -> None:
+    path.write_bytes(path.read_bytes() + b" ")
+
+
+def test_inputs_digest_moves_with_corpus_and_fixture_bytes_but_candidate_does_not(
+    tmp_path: Path,
+) -> None:
+    root = _digest_tree(tmp_path)
+    before = run_paired(root=root)
+    assert before["table_id_candidate"] == SEALED_CANDIDATE
+    record = before["inputs_digest_record"]
+    assert record["row_source"] == "joint_story_fixtures"
+    assert record["joint_eval_commit"] is None  # no .git in the copy
+    paths = {item["path"] for item in record["files"]}
+    assert "eval/measured_corpus/index.json" in paths
+    assert "eval/joint_story/pep_approval_binding/envelope.json" in paths
+
+    _append_byte(root / "eval" / "measured_corpus" / "index.json")
+    after_index = run_paired(root=root)
+    assert after_index["inputs_digest"] != before["inputs_digest"]
+    assert after_index["table_id_candidate"] == SEALED_CANDIDATE
+    assert after_index["table_id_candidate_preimage"] == before["table_id_candidate_preimage"]
+
+    _append_byte(root / "eval" / "joint_story" / "pep_approval_binding" / "envelope.json")
+    after_fixture = run_paired(root=root)
+    assert after_fixture["inputs_digest"] not in {
+        before["inputs_digest"],
+        after_index["inputs_digest"],
+    }
+    assert after_fixture["table_id_candidate"] == SEALED_CANDIDATE
+    assert after_fixture["rows"] == before["rows"]
+
+
+def test_inputs_digest_is_stable_and_printed(tmp_path: Path) -> None:
+    root = _digest_tree(tmp_path)
+    first = run_paired(root=root)
+    second = run_paired(root=root)
+    assert first["inputs_digest"] == second["inputs_digest"]
+    assert len(first["inputs_digest"]) == 64
+    assert f"inputs_digest: {first['inputs_digest']}" in format_summary(first)
+
+
+def test_expect_inputs_digest_mismatch_fails_the_cli(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _digest_tree(tmp_path)
+    out = tmp_path / "o" / "p.json"
+    assert main(["--out", str(out), "--root", str(root)]) == 0
+    digest = json.loads(out.read_text(encoding="utf-8"))["inputs_digest"]
+    capsys.readouterr()
+    assert main(["--out", str(out), "--root", str(root), "--expect-inputs-digest", digest]) == 0
+    _append_byte(root / "eval" / "measured_corpus" / "index.json")
+    code = main(["--out", str(out), "--root", str(root), "--expect-inputs-digest", digest])
+    assert code == 1
+    assert "PAIRED RUNNER FAIL: inputs_digest" in capsys.readouterr().err

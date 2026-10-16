@@ -4,10 +4,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
+import hashlib
 import json
 import os
 import stat
 import tomllib
+from collections.abc import Iterator
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
@@ -21,6 +25,28 @@ INDEX_NAME = "index.json"
 
 class FixturePathError(ValueError):
     """A fixture path leaves its root, is a link, or is not a plain file or directory."""
+
+
+# Set by ``record_fixture_reads``: a list that each successful read appends
+# ``(path, sha256)`` to. Unset (None) outside a recording.
+_READ_LOG: contextvars.ContextVar[list[tuple[Path, str]] | None] = contextvars.ContextVar(
+    "joint_eval_fixture_read_log", default=None
+)
+
+
+@contextlib.contextmanager
+def record_fixture_reads() -> Iterator[list[tuple[Path, str]]]:
+    """Collect ``(path, sha256 of the bytes read)`` for every fixture read in the block.
+
+    The paired runner uses this to digest exactly the bytes it used. Reads
+    that fail are not recorded.
+    """
+    log: list[tuple[Path, str]] = []
+    token = _READ_LOG.set(log)
+    try:
+        yield log
+    finally:
+        _READ_LOG.reset(token)
 
 
 PROJECT_NAME = "agent-control-lab-joint-eval"
@@ -119,7 +145,11 @@ def read_fixture_bytes(path: Path) -> bytes:
         if not stat.S_ISREG(info.st_mode):
             raise FixturePathError(f"fixture file is not a regular file: {path.name}")
         _refuse_hard_link(info, path)
-        return handle.read()
+        data = handle.read()
+    log = _READ_LOG.get()
+    if log is not None:
+        log.append((path, hashlib.sha256(data).hexdigest()))
+    return data
 
 
 def _refuse_hard_link(info: os.stat_result, path: Path) -> None:
