@@ -200,7 +200,7 @@
           "residual_asr": null,
           "tip_pins": {
             "pep": "88231949863e10522814ac69a4f4bd335d9e0552",
-            "supply_gate": "009c0cec362505240c7f33cf7c297bb89c234726",
+            "supply_gate": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
             "joint": null
           }
         }
@@ -646,7 +646,7 @@
           "residual_asr": null,
           "tip_pins": {
             "pep": "88231949863e10522814ac69a4f4bd335d9e0552",
-            "supply_gate": "009c0cec362505240c7f33cf7c297bb89c234726",
+            "supply_gate": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
             "joint": null
           }
         }
@@ -744,7 +744,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/plugin4shell_class/",
           "source_id": "plugin4shell_class"
         },
@@ -783,7 +783,7 @@
           "residual_asr": null,
           "tip_pins": {
             "pep": "88231949863e10522814ac69a4f4bd335d9e0552",
-            "supply_gate": "009c0cec362505240c7f33cf7c297bb89c234726",
+            "supply_gate": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
             "joint": null
           }
         }
@@ -815,7 +815,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/omitted_adapter_head/",
           "source_id": "omitted_adapter_head"
         },
@@ -854,7 +854,7 @@
           "residual_asr": null,
           "tip_pins": {
             "pep": "88231949863e10522814ac69a4f4bd335d9e0552",
-            "supply_gate": "009c0cec362505240c7f33cf7c297bb89c234726",
+            "supply_gate": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
             "joint": null
           }
         }
@@ -883,7 +883,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/prose_waive_attempt/",
           "source_id": "prose_waive_attempt"
         }
@@ -944,7 +944,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/auto_latest_rejected/",
           "source_id": "auto_latest_rejected"
         }
@@ -1005,7 +1005,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/trust_ref_rejected/",
           "source_id": "trust_ref_rejected"
         }
@@ -1067,7 +1067,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/unreadable_allowlist/",
           "source_id": "unreadable_allowlist"
         }
@@ -1126,7 +1126,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/allow_pin_and_verify/",
           "source_id": "allow_pin_and_verify"
         }
@@ -1583,7 +1583,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/mcp_server_unpinned/",
           "source_id": "mcp_server_unpinned"
         }
@@ -1644,7 +1644,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/skill_shell_preapproved/",
           "source_id": "skill_shell_preapproved"
         }
@@ -1705,7 +1705,7 @@
         {
           "role": "supply_eval",
           "repo": "https://github.com/gs034/agent-control-lab-supply-gate",
-          "git_sha": "009c0cec362505240c7f33cf7c297bb89c234726",
+          "git_sha": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
           "path": "eval/hook_update_unverified/",
           "source_id": "hook_update_unverified"
         }
@@ -3345,7 +3345,7 @@
           "residual_asr": null,
           "tip_pins": {
             "pep": "88231949863e10522814ac69a4f4bd335d9e0552",
-            "supply_gate": "009c0cec362505240c7f33cf7c297bb89c234726",
+            "supply_gate": "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
             "joint": null
           }
         }

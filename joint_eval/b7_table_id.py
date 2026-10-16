@@ -17,16 +17,17 @@ from typing import Any
 from joint_eval.loader import FixturePathError, read_fixture_bytes, repo_root
 from joint_eval.pins import PEP_SHA, SUPPLY_GATE_SHA
 
-ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15"
+ARTEFACT_ID = "ACL_JointEval_Preregistration_Limitations_B7v6_2026-10-16"
 # Earlier seals stay in docs/ byte-identical: v1 (pep ffd048a), v2
-# (supply-gate f99b41d), v3 (pep 76c6d4b, supply-gate 7044a31) and v4 (pep
-# 653ee4a, supply-gate d5e5ac1). They are not read for the candidate; tests
-# pin them.
+# (supply-gate f99b41d), v3 (pep 76c6d4b, supply-gate 7044a31), v4 (pep
+# 653ee4a, supply-gate d5e5ac1) and v5 (pep 8823194, supply-gate 009c0ce).
+# They are not read for the candidate; tests pin them.
 HISTORICAL_ARTEFACT_IDS = (
     "ACL_JointEval_Preregistration_Limitations_B7_2026-09-23",
     "ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05",
     "ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05",
     "ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15",
+    "ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15",
 )
 RELATIVE_PATH = Path("docs") / f"{ARTEFACT_ID}.md"
 CLAIM_LINEAGE = "1d0f380"
