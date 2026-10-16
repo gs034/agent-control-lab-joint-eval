@@ -23,8 +23,8 @@ classifiers = [
 dependencies = [
     # Pinned GitHub main-line tips. Do not vendor sibling trees.
     # Prefer these SHA pins over floating branches.
-    "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@88231949863e10522814ac69a4f4bd335d9e0552",
-    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca",
+    "agent-control-lab-pep @ git+https://github.com/gs034/agent-control-lab-pep.git@365a952f32e7b5335dd42862409770c3550cc487",
+    "agent-control-lab-supply-gate @ git+https://github.com/gs034/agent-control-lab-supply-gate.git@8cfdfac71972188aeef20714b827fa3a9c925908",
 ]
 
 [project.optional-dependencies]
@@ -44,4 +44,4 @@ include = ["joint_eval"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+addopts = "-q -rs"

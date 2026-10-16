@@ -21,14 +21,14 @@ from pathlib import Path, PurePosixPath
 from types import ModuleType
 
 PEP_REPO = "https://github.com/gs034/agent-control-lab-pep"
-# Install pins (B7 v6): the J-5 installed-pin check refuses any other commit,
+# Install pins (B7 v7): the J-5 installed-pin check refuses any other commit,
 # so a host that installs joint-eval must install these sibling commits.
-PEP_SHA = "88231949863e10522814ac69a4f4bd335d9e0552"
+PEP_SHA = "365a952f32e7b5335dd42862409770c3550cc487"
 PEP_PACKAGE = "agent-control-lab-pep"
 
 SUPPLY_GATE_REPO = "https://github.com/gs034/agent-control-lab-supply-gate"
 # Not the claim cite.
-SUPPLY_GATE_SHA = "97cfc0b5fd6f2de4c070bc64f21f013d0e3096ca"
+SUPPLY_GATE_SHA = "8cfdfac71972188aeef20714b827fa3a9c925908"
 SUPPLY_GATE_PACKAGE = "agent-control-lab-supply-gate"
 
 

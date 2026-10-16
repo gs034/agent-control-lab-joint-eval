@@ -412,7 +412,7 @@ def test_csv_of_the_in_tree_run_has_no_escapes() -> None:
 # J-8: table_id_candidate binds only the frozen B7 note, the schema version
 # and the pins. inputs_digest binds the bytes the run read.
 
-SEALED_CANDIDATE = "e7acb1ff9fe5e2ade949e8eb4b4b5a7e71ad213a9c010abd014749fd49e7bc57"
+SEALED_CANDIDATE = "3d575f8c2b5be8c201e2112413705055d3c8d1c0df423e17ee4703f033853262"
 
 
 def _digest_tree(tmp_path: Path) -> Path:

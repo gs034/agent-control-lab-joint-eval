@@ -26,10 +26,11 @@ def _write(out: Path) -> None:
         output.replace("a.json", "1\n")
 
 
-@pytest.mark.skipif(not ROOT_USER, reason="needs lchown to plant another user's symlink")
 def test_ancestor_swapped_for_another_users_symlink_after_the_check_is_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if not ROOT_USER:
+        pytest.skip("root only: needs lchown to plant another user's symlink")
     victim = tmp_path / "victim"
     (victim / "b").mkdir(parents=True)
     (tmp_path / "a" / "b").mkdir(parents=True)
@@ -48,8 +49,9 @@ def test_ancestor_swapped_for_another_users_symlink_after_the_check_is_refused(
     assert list((victim / "b").iterdir()) == []
 
 
-@pytest.mark.skipif(not ROOT_USER, reason="needs chown")
 def test_ancestor_owned_by_another_user_is_refused(tmp_path: Path) -> None:
+    if not ROOT_USER:
+        pytest.skip("root only: needs chown")
     shared = tmp_path / "shared"
     mine = shared / "mine"
     mine.mkdir(parents=True)
@@ -100,9 +102,10 @@ def test_file_in_the_parent_is_refused(tmp_path: Path) -> None:
         _write(tmp_path / "f" / "out")
 
 
-@pytest.mark.skipif(not ROOT_USER, reason="needs lchown to plant another user's symlink")
 def test_racing_ancestor_swap_never_redirects(tmp_path: Path) -> None:
     """A thread flips an ancestor link between this user's directory and another user's target."""
+    if not ROOT_USER:
+        pytest.skip("root only: needs lchown to plant another user's symlink")
     real = tmp_path / "real"
     victim = tmp_path / "victim"
     (real / "b").mkdir(parents=True)
@@ -275,10 +278,11 @@ def _swap_link_before_readlink(
     return calls
 
 
-@pytest.mark.skipif(not ROOT_USER, reason="needs lchown to plant another user's symlink")
 def test_link_swapped_between_owner_check_and_readlink_never_redirects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    if not ROOT_USER:
+        pytest.skip("root only: needs lchown to plant another user's symlink")
     real = tmp_path / "real"
     victim = tmp_path / "victim"
     (real / "b").mkdir(parents=True)

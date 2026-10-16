@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>B9 late-effect fence outcome mapping stub</title>
+</head>
+<body>
+<h1>B9 late-effect fence outcome mapping stub</h1>
+<p><strong>Brand:</strong> Agent Control Lab. <strong>Licence:</strong> Apache-2.0.</p>
+<p><strong>Artefact:</strong> <code>ACL_Artefact_Mapping_Tables_B9</code>. Machine-readable table: <a href="fence-outcome-b9.json"><code>fence-outcome-b9.json</code></a>. Loader: <code>joint_eval.fence_outcome</code>.</p>
+<p>This page maps pep late-effect fence, admission-consumed, and kill-active existence fixtures, plus the related suspend corpus row, onto the revocation-suite registered outcome vocabulary. The vocabulary is a <strong>pattern cite</strong> of <a href="https://arxiv.org/abs/2609.21284">arXiv:2609.21284</a> (Table 5 scenario groups). This stub does not claim the paper&#x27;s 17/17. It does not claim conformance, SLSA, or a kernel fence. It does not add a DENY class.</p>
+<p><strong>Claim cite:</strong> public/EOI pep diligence tip <strong><code>1d0f380</code></strong> (<code>1d0f3809a4a16d4a6ac3524b287cf719f192e1f9</code>). This mapping does not change it.</p>
+<p><strong>Pep pin:</strong> <code>365a952f32e7b5335dd42862409770c3550cc487</code>. Fixture paths are references into that pin. This tree does not vendor pep source.</p>
+<p><code>table_id</code> is JSON <code>null</code>. <code>residual_asr</code> is JSON <code>null</code>. <strong>No ASR.</strong></p>
+<h2>Labels</h2>
+<table><thead><tr><th>Label</th><th>Meaning</th></tr></thead><tbody><tr><td><code>covered</code></td><td>The Lab fixture is an in-process existence analogue of that suite pattern. The Lab receipt stays the existing pep DENY. The suite verdict word is not emitted.</td></tr><tr><td><code>not_applicable_by_design</code></td><td>The Lab does not implement that suite outcome. The row records the gap. It is not a DENY and not a measured result.</td></tr></tbody></table>
+<h2>Lab fence fixtures</h2>
+<table><thead><tr><th>Fixture</th><th>Path at the pep pin</th><th>Lab reason</th><th>Suite pattern</th><th>Label</th></tr></thead><tbody><tr><td><code>acl-pep-eval-late-effect-fence-001</code></td><td><code>eval/corpus/late_effect_fence/</code></td><td><code>late_effect_fence</code></td><td>Root cut and sink fence</td><td><code>covered</code></td></tr><tr><td><code>acl-pep-eval-kill-001</code></td><td><code>eval/corpus/kill/</code></td><td><code>kill_active</code></td><td>Root cut without sink fence</td><td><code>not_applicable_by_design</code></td></tr><tr><td><code>pep-test-admission-consumed</code></td><td><code>tests/test_late_effect_fence.py</code></td><td><code>admission_consumed</code></td><td>Terminal channel reopen</td><td><code>not_applicable_by_design</code></td></tr><tr><td><code>acl-pep-eval-suspend-001</code></td><td><code>eval/corpus/suspend/</code></td><td><code>suspend_active</code></td><td>(none; related kill/suspend row)</td><td><code>not_applicable_by_design</code></td></tr></tbody></table>
+<p><code>covered</code> on the late-effect row means the pinned corpus fixture denies completion of a pre-cut admission after <code>kill()</code> (<code>late_effect_fence</code>, no tool entry). It does not mean the suite verdict Quiescent, and it does not mean a root-scoped certificate.</p>
+<p><code>kill_active</code> is the fresh-evaluate DENY while killed. The suite&#x27;s cut-only outcome is that an already scheduled effect stays admissible (<code>Not-Quiescent</code>). Lab <code>kill()</code> is a cut plus fence, so that cut-only arm is not applicable by design.</p>
+<p><code>admission_consumed</code> is the existing one-shot permit DENY (second complete, or a replay while the tool is running). There is no pep corpus directory for it. The suite&#x27;s terminal channel reopen is a different object, so the mapping is not applicable by design.</p>
+<p><code>suspend_active</code> is the related kill/suspend corpus row. It is not a registered suite outcome.</p>
+<p>Every other registered outcome in the vocabulary (cancellation acknowledgement only, restart and stale-process, alternate-root rebind, opaque endpoint / missing fence, typed pre-fence commitments, open obligation / in-flight token, exact retry / body conflict / remint, conjunctive witness enforcement, ghost leaf token) is <code>not_applicable_by_design</code>. Lab does not emit Quiescent, Not-Quiescent, or Indeterminate.</p>
+<h2>Out of scope</h2>
+<p>No new kernel fence. No provider cutset. No cross-process certificate. Soft is not EngClear. EngClear is not a Cyber C4 table mint. Claim cite stays <code>1d0f380</code>.</p>
+</body>
+</html>
