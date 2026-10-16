@@ -132,6 +132,21 @@ def build_control_arena_export(*, root: Path | None = None) -> dict[str, Any]:
     return document
 
 
+def _escape_del_c1(line: str) -> str:
+    """Write DEL and C1 controls in a JSON line as ``\\u00NN`` escapes (J-10).
+
+    ``json.dumps`` already escapes C0 controls but, with
+    ``ensure_ascii=False``, leaves DEL and C1 (such as U+009B CSI) raw.
+    Those characters only occur inside JSON strings, where the escape
+    decodes to the same character, so readers see identical data. Other
+    non-ASCII text is kept as UTF-8.
+    """
+    return "".join(
+        f"\\u{ord(char):04x}" if char == "\x7f" or "\x80" <= char <= "\x9f" else char
+        for char in line
+    )
+
+
 def write_control_arena_export(
     output_dir: Path,
     *,
@@ -140,7 +155,8 @@ def write_control_arena_export(
     """Write ``trajectory.jsonl``, ``tools.json``, and ``metadata.json``."""
     document = build_control_arena_export(root=root)
     lines = [
-        json.dumps(row, sort_keys=True, ensure_ascii=False) for row in document["trajectories"]
+        _escape_del_c1(json.dumps(row, sort_keys=True, ensure_ascii=False))
+        for row in document["trajectories"]
     ]
     text = "\n".join(lines)
     if text:
