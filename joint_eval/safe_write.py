@@ -317,6 +317,19 @@ def _open_anchor(label: Path) -> int:
         raise OutputPathError(f"output parent unavailable: {exc}") from exc
 
 
+# open(O_PATH) is missing or this filesystem rejects the flag.
+_OPATH_UNSUPPORTED = frozenset(
+    code
+    for code in (
+        getattr(errno, "EINVAL", None),
+        getattr(errno, "ENOTSUP", None),
+        getattr(errno, "EOPNOTSUPP", None),
+        getattr(errno, "ENOSYS", None),
+    )
+    if code
+)
+
+
 def _trusted_link_target(dir_fd: int, name: str, label: Path, error: OSError) -> str:
     """The open of ``name`` failed: return a trusted symlink's target, or refuse.
 
@@ -343,8 +356,10 @@ def _trusted_link_target(dir_fd: int, name: str, label: Path, error: OSError) ->
         finally:
             os.close(link_fd)
     try:
-        info = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+        return os.open(name, flags, dir_fd=dir_fd)
     except OSError as exc:
+        if exc.errno in _OPATH_UNSUPPORTED:
+            return None
         raise OutputPathError(f"output parent unavailable: {label}: {exc}") from exc
     _require_trusted_link(info, label, error)
     try:
