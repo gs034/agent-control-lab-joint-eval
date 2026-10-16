@@ -8,7 +8,7 @@ This page maps pep late-effect fence, admission-consumed, and kill-active existe
 
 **Claim cite:** public/EOI pep diligence tip **`1d0f380`** (`1d0f3809a4a16d4a6ac3524b287cf719f192e1f9`). This mapping does not change it.
 
-**Pep pin:** `88231949863e10522814ac69a4f4bd335d9e0552`. Fixture paths are references into that pin. This tree does not vendor pep source.
+**Pep pin:** `365a952f32e7b5335dd42862409770c3550cc487`. Fixture paths are references into that pin. This tree does not vendor pep source.
 
 `table_id` is JSON `null`. `residual_asr` is JSON `null`. **No ASR.**
 

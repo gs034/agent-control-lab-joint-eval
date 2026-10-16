@@ -226,8 +226,9 @@ def test_export_refuses_a_world_writable_output_dir(tmp_path: Path) -> None:
     assert list(out.iterdir()) == []
 
 
-@pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() != 0, reason="needs chown")
 def test_export_refuses_an_output_dir_owned_by_another_user(tmp_path: Path) -> None:
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("root only: needs chown")
     out = tmp_path / "out"
     out.mkdir()
     os.chown(out, 65534, 65534)
@@ -326,8 +327,8 @@ def test_paired_runner_pins_sequence_envelope_dirs(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
 def test_export_into_a_parent_owned_by_another_user_is_refused(tmp_path: Path) -> None:
-    if os.geteuid() != 0:
-        pytest.skip("needs chown")
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("root only: needs chown")
     shared = tmp_path / "shared"
     shared.mkdir()
     os.chown(shared, 65534, 65534)
@@ -352,8 +353,8 @@ def test_export_into_a_world_writable_non_sticky_parent_is_refused(tmp_path: Pat
 
 @pytest.mark.skipif(not POSIX, reason="POSIX symlinks")
 def test_export_through_another_users_symlink_is_refused(tmp_path: Path) -> None:
-    if os.geteuid() != 0:
-        pytest.skip("needs lchown")
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("root only: needs lchown")
     victim = tmp_path / "victim"
     victim.mkdir()
     link = tmp_path / "link"
