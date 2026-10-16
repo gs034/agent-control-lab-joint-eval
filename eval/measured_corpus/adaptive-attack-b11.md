@@ -37,6 +37,6 @@ B11 is the other story: monitor-targeted injection while the structured invoke e
 
 ## Out of scope
 
-Soft notes from B8 (canonical JSON, honesty keys, rug-pull sample shape, no checked-in export directory) stay parked. The supply pin bump, hosted pytest re-enable, and B13 are not this row.
+Draft notes from B8 (canonical JSON, honesty keys, rug-pull sample shape, no checked-in export directory) stay parked. The supply pin bump, hosted pytest re-enable, and B13 are not this row.
 
 `measured_attack_success_claimed` stays false. No ASR.

@@ -6,7 +6,7 @@
 
 This page is not a measured attack-success table. It stores no rates. `residual_asr` stays JSON `null`. Counters stay JSON `null` while `existence_proof_only` is true. **No ASR.**
 
-**Claim cite:** public/EOI pep diligence tip **`1d0f380`**. This row does not change it. The soft supply install pin stays the SHA in `joint_eval/pins.py`.
+**Claim cite:** public/EOI pep diligence tip **`1d0f380`**. This row does not change it. The supply install pin stays the SHA in `joint_eval/pins.py`.
 
 ## Mediated sequence
 

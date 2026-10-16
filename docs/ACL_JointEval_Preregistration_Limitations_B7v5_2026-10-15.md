@@ -4,16 +4,16 @@
 
 **Artefact id:** `ACL_JointEval_Preregistration_Limitations_B7v5_2026-10-15`.
 
-**Supersedes:** `ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15`, which superseded `ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05`, `ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05` and `ACL_JointEval_Preregistration_Limitations_B7_2026-09-23`. All four stay in this tree byte-identical as historical seals. v5 changes only the pep and supply-gate install pins and records why. Every limitation, status rule and provisional-field rule below is carried over unchanged.
+**Supersedes:** `ACL_JointEval_Preregistration_Limitations_B7v4_2026-10-15`, which superseded `ACL_JointEval_Preregistration_Limitations_B7v3_2026-10-05`, `ACL_JointEval_Preregistration_Limitations_B7v2_2026-10-05` and `ACL_JointEval_Preregistration_Limitations_B7_2026-09-23`. v1, v2, and v3 stay in this tree byte-identical as historical seals. v4 stays in this tree as a draft. v5 changes only the pep and supply-gate install pins and records why. Every limitation, status rule and provisional-field rule below is carried over unchanged.
 
-**Sealed:** 2026-10-15. This file is the frozen in-tree text. `b7_prereg_hash` is the SHA-256 of these bytes. `table_id_candidate` binds that hash to the paired-runner schema version and the pin set below. The paired runner reads this file from the joint-eval tree. It does not fetch a writing vault at runtime. The hash is not stored in this file.
+**Status:** draft for owner review. This file is the in-tree text. `b7_prereg_hash` is the SHA-256 of these bytes. `table_id_candidate` binds that hash to the paired-runner schema version and the pin set below. The paired runner reads this file from the joint-eval tree. It does not fetch a writing vault at runtime. The hash is not stored in this file.
 
 ## Status separation
 
 Three statuses stay distinct.
 
-- Soft is this writing note.
-- EngClear is a cyber pass. Soft is not EngClear.
+- This draft is the writing note.
+- EngClear is a cyber pass. This draft is not EngClear.
 - A Cyber C4 table mint is a later `table_id`. EngClear is not a C4 table mint.
 - This candidate does not unlock funding.
 
@@ -33,11 +33,11 @@ Paired-runner schema version bound into `table_id_candidate`: `acl-paired-existe
 
 ## Why v5
 
-v4 pinned pep `653ee4a` and supply-gate `d5e5ac1`. v5 pins pep `8823194` (still 0.8.0, 6 commits later) and supply-gate `009c0ce` (still 0.4.1, 17 commits later). These carry the 14 October 2026 re-scan fixes in both siblings: pep P-2 to P-5 (mutation-audit links and seal fields, bounded log records, one bounded executor reply frame per call, locked halt writes), and supply-gate S-2 to S-6 (tool names inside rule parentheses, hooks with two runnables, camelCase shell names, kill-switch spellings, DENY instead of raising on the adapter path). The Lab console moves to the same pins, so the J-5 installed-pin check holds on both.
+v4 pinned pep `653ee4a` and supply-gate `d5e5ac1`. v5 pins pep `8823194` (still 0.8.0, 6 commits later) and supply-gate `009c0ce` (still 0.4.1, 17 commits later). These carry the 14 October 2026 re-scan fixes in both siblings: pep P-2 to P-5 (mutation-audit links and seal fields, bounded log records, one bounded executor reply frame per call, locked halt writes), and supply-gate S-2 to S-6 (tool names inside rule parentheses, hooks with two runnables, camelCase shell names, kill-switch spellings, DENY instead of raising on the adapter path). These are the joint-eval install pins. Console pins are updated separately. joint-eval refuses to run unless the installed sibling packages are these pins (finding J-5).
 
 No file under `eval/` changes in either sibling between the v4 and v5 pins. The documented paired run against checkouts at the v5 pins reports the same rows and outcomes as at the v4 pins: PEP blocked 14 of 14, the stack blocked 12 of 12, `ok: true`. Only `table_id_candidate` differs, because the pins are part of its preimage. The evasion fixtures observe the same outcomes as at pep `653ee4a`.
 
-v5 is a new seal, not an edit of v4. Its `b7_prereg_hash` and `table_id_candidate` therefore differ from v4's.
+v5 is a new draft, not an edit of v4. Its `b7_prereg_hash` and `table_id_candidate` therefore differ from v4's.
 
 ## Why v4 (carried over)
 
@@ -47,7 +47,7 @@ No file under `eval/` changes in either sibling between the v3 and v4 pins, so e
 
 Two evasion fixtures observe new behaviour at pep `653ee4a`. A nested envelope under an extra `invoke` key, and an unknown `schema_fields` key, were ALLOW (not-mediated residuals) at `76c6d4b`. Both are now DENY `envelope_invalid`. The evasion tests record the new outcome. This narrows a residual; it is not an ASR claim.
 
-v4 is a new seal, not an edit of v3. Its `b7_prereg_hash` and `table_id_candidate` therefore differ from v3's.
+v4 is a new draft, not an edit of v3. Its `b7_prereg_hash` and `table_id_candidate` therefore differ from v3's.
 
 ## Why v3 (carried over)
 

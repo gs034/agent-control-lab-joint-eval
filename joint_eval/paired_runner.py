@@ -7,9 +7,7 @@ control-on) and writes provisional attack-success counts. This is not a
 residual ASR, not a letters ASR, and not a Cyber C4 table. ``table_id``
 and ``residual_asr`` stay null. ``table_id_candidate`` and
 ``b7_prereg_hash`` are provisional addresses of the frozen B7 note.
-They do not bind the corpus or fixtures; ``inputs_digest`` does (see
-``_inputs_record``).
-Soft is not EngClear. EngClear is not a C4 table mint. The public/EOI
+This output is not eng clear. EngClear is not a C4 table mint. The public/EOI
 claim cite stays pep diligence tip ``1d0f380``.
 
 ``runner_implemented`` is true on this runner's document only. The
